@@ -1,0 +1,11 @@
+node_modules/
+.env
+dist/
+.next/
+*.tsbuildinfo
+
+# Embedded sub-repos
+ECCTools/
+
+# Supabase temp files
+supabase/.temp/
