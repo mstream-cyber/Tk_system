@@ -41,12 +41,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // GET /api/config — public payment details
 app.get('/api/config', (_req, res) => {
   res.json(success({
-    bank_name: process.env.BANK_NAME || 'Meezan Bank',
-    bank_account_title: process.env.BANK_ACCOUNT_TITLE || 'Global Tickets Pvt Ltd',
-    bank_account_number: process.env.BANK_ACCOUNT_NUMBER || '0123-0123456789',
+    bank_name: process.env.BANK_NAME || 'JS BANK',
+    bank_account_title: process.env.BANK_ACCOUNT_TITLE || 'Mawj Media',
+    bank_account_number: process.env.BANK_ACCOUNT_NUMBER || '0001894285',
     bank_iban: process.env.BANK_IBAN || 'PK00MEZN0001234567890',
-    easypaisa_number: process.env.EASYPAISA_NUMBER || '0300-0000000',
-    easypaisa_title: process.env.EASYPAISA_TITLE || 'Global Tickets',
+    easypaisa_number: process.env.EASYPAISA_NUMBER || '03333323391',
+    easypaisa_title: process.env.EASYPAISA_TITLE || 'AHSAN',
     contact_whatsapp: process.env.CONTACT_WHATSAPP || '+923000000000',
   }));
 });
