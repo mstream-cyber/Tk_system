@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { fetchEvents, createBooking, uploadReceiptWithProgress, getOrderStatus, fetchConfig, joinWaitlist } from '../api';
 import { formatPrice, formatDate } from '../utils/format';
 import type { EventType, FormData, BookingData, PaymentConfig } from '../types';
+import msLogo from '../assets/mslogo.png';
 
 const emptyForm: FormData = {
   ticketTypeId: '',
@@ -237,7 +238,7 @@ export default function BookingPage() {
       <div className="min-h-screen bg-[#181b21] py-6 px-4">
         <div className="max-w-[480px] mx-auto">
           <div className="relative flex items-center justify-center mb-6 min-h-[40px]">
-            <img src="/mslogo.png" alt="Logo" className="absolute left-0 h-10 w-auto" />
+            <img src={msLogo} alt="Logo" className="absolute left-0 h-10 w-auto" />
             <h1 className="text-2xl font-bold text-white">Ticket Portal</h1>
           </div>
           {event && (
@@ -279,7 +280,7 @@ export default function BookingPage() {
       <div className="min-h-screen bg-[#181b21] py-6 px-4">
         <div className="max-w-[480px] mx-auto">
           <div className="relative flex items-center justify-center mb-6 min-h-[40px]">
-            <img src="/mslogo.png" alt="Logo" className="absolute left-0 h-10 w-auto" />
+            <img src={msLogo} alt="Logo" className="absolute left-0 h-10 w-auto" />
             <h1 className="text-2xl font-bold text-white">Ticket Portal</h1>
           </div>
           <div className="flex flex-col gap-4">
@@ -554,7 +555,7 @@ export default function BookingPage() {
     <div className="min-h-screen bg-[#181b21] py-6 px-4">
       <div className="max-w-[480px] mx-auto">
         <div className="relative flex items-center justify-center mb-2 min-h-[40px]">
-          <img src="/mslogo.png" alt="Logo" className="absolute left-0 h-10 w-auto" />
+          <img src={msLogo} alt="Logo" className="absolute left-0 h-10 w-auto" />
           <h1 className="text-2xl font-bold text-white">Ticket Portal</h1>
         </div>
         <StepDots />

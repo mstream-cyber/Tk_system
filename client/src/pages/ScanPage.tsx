@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import msLogo from '../assets/mslogo.png';
 
 type ScanState = 'pin' | 'scanning' | 'loading' | 'valid' | 'already_used' | 'invalid' | 'reset_success';
 type ResultData = {
@@ -417,7 +418,7 @@ export default function ScanPage() {
     <div className="min-h-screen bg-[#181b21] flex flex-col items-center px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="relative flex items-center justify-center mb-6 min-h-[40px]">
-          <img src="/mslogo.png" alt="Logo" className="absolute left-0 h-10 w-auto" />
+          <img src={msLogo} alt="Logo" className="absolute left-0 h-10 w-auto" />
           <h1 className="text-xl font-bold text-white">Ticket Scanner</h1>
         </div>
         <p className="text-gray-400 text-sm text-center mb-6">Point camera at ticket QR code</p>

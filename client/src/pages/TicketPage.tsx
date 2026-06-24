@@ -4,6 +4,7 @@ import { fetchTicket } from '../api';
 import TicketCard from '../components/TicketCard';
 import { downloadTicketPDF } from '../utils/downloadTicket';
 import type { TicketOrder } from '../types';
+import msLogo from '../assets/mslogo.png';
 
 export default function TicketPage() {
   const { ticket_id } = useParams<{ ticket_id: string }>();
@@ -62,7 +63,7 @@ export default function TicketPage() {
       <div className="min-h-screen bg-[#181b21] py-8 px-4">
         <div className="max-w-[480px] mx-auto">
           <div className="relative flex items-center justify-center mb-6 min-h-[40px]">
-            <img src="/mslogo.png" alt="Logo" className="absolute left-0 h-10 w-auto" />
+            <img src={msLogo} alt="Logo" className="absolute left-0 h-10 w-auto" />
             <h1 className="text-2xl font-bold text-white">Ticket Portal</h1>
           </div>
           <TicketCard
@@ -107,7 +108,7 @@ export default function TicketPage() {
     <div className="min-h-screen bg-[#181b21] py-8 px-4">
       <div className="max-w-[480px] mx-auto text-center">
         <div className="relative flex items-center justify-center mb-6 min-h-[40px]">
-          <img src="/mslogo.png" alt="Logo" className="absolute left-0 h-10 w-auto" />
+          <img src={msLogo} alt="Logo" className="absolute left-0 h-10 w-auto" />
           <h1 className="text-2xl font-bold text-white">Ticket Portal</h1>
         </div>
         <div className="w-20 h-20 rounded-full bg-amber-500 flex items-center justify-center mx-auto mb-4">
