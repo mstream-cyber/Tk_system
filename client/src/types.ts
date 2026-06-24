@@ -73,12 +73,13 @@ export interface TicketOrder {
   ticket_types: {
     name: string;
     price: number;
-    events: {
-      name: string;
-      date: string;
-      venue: string;
-      city: string;
-    };
+      events: {
+        name: string;
+        date: string;
+        venue: string;
+        city: string;
+        banner_url: string | null;
+      };
   };
 }
 

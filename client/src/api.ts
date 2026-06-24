@@ -55,7 +55,8 @@ export function uploadReceiptWithProgress(
     xhr.onload = () => {
       try {
         resolve(JSON.parse(xhr.responseText));
-      } catch {
+      } catch (err) {
+        console.error('Failed to parse upload response:', err);
         resolve({ success: false, error: 'Upload failed' });
       }
     };

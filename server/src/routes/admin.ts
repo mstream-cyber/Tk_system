@@ -3,14 +3,17 @@ import { body, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
 import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
-import { authMiddleware, generateToken } from '../middleware/auth';
+import { requireRole, generateToken } from '../middleware/auth';
+import { MS } from '../lib/constants';
 import { sendTicketEmail, sendRejectionEmail } from '../services/email';
+import { generateTicketId } from '../utils/ticketId';
+import { generateScanToken } from '../utils/scanToken';
 import type { Order } from '../services/email';
 
 const router = Router();
 
 const loginLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
+  windowMs: MS.ONE_HOUR,
   max: 10,
   message: { success: false, error: 'Too many login attempts' }
 });
@@ -22,23 +25,40 @@ router.post('/login', loginLimiter, (req: Request, res: Response) => {
     res.status(401).json(error('Invalid password'));
     return;
   }
-  const token = generateToken();
+  const token = generateToken('admin');
+  res.cookie('admin_token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: MS.EIGHT_HOURS,
+    path: '/',
+  });
   res.json(success({ token }));
 });
 
-router.use(authMiddleware);
+router.use(requireRole('admin'));
 
 router.get('/orders', async (req: Request, res: Response) => {
   const status = (req.query.status as string) || '';
   const search = (req.query.search as string) || '';
   const type = (req.query.type as string) || '';
+  const method = (req.query.method as string) || '';
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+  const offset = (page - 1) * limit;
+
+  const { count: total } = await supabase
+    .from('orders')
+    .select('*', { count: 'exact', head: true });
 
   let queryBuilder = supabase
     .from('orders')
     .select(`*, ticket_types ( name, price, events ( name, date, venue, city ) )`)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
   if (status) queryBuilder = queryBuilder.eq('payment_status', status);
+  if (method) queryBuilder = queryBuilder.eq('payment_method', method);
   if (search) queryBuilder = queryBuilder.or(`buyer_name.ilike.%${search}%,buyer_email.ilike.%${search}%,ticket_id.ilike.%${search}%`);
   const { data: orders, error: fetchErr } = await queryBuilder;
   if (fetchErr) { res.status(500).json(error('Failed to fetch orders')); return; }
@@ -46,7 +66,7 @@ router.get('/orders', async (req: Request, res: Response) => {
   if (type) {
     result = result.filter((o) => o.ticket_types?.name === type);
   }
-  res.json(success(result));
+  res.json(success({ orders: result, total: total ?? 0, page, limit }));
 });
 
 router.get('/orders/:order_id/receipt', async (req: Request, res: Response) => {
@@ -89,15 +109,127 @@ router.post('/orders/:order_id/reject', body('reason').trim().notEmpty().withMes
 });
 
 router.get('/stats', async (_req: Request, res: Response) => {
-  const { data: allOrders, error: fetchErr } = await supabase.from('orders').select('payment_status, total_amount');
-  if (fetchErr) { res.status(500).json(error('Failed to fetch stats')); return; }
-  const pending_count = allOrders.filter((o) => o.payment_status === 'pending').length;
-  const receipt_uploaded_count = allOrders.filter((o) => o.payment_status === 'receipt_uploaded').length;
-  const approved_count = allOrders.filter((o) => o.payment_status === 'approved').length;
-  const rejected_count = allOrders.filter((o) => o.payment_status === 'rejected').length;
-  const total_revenue_approved = allOrders.filter((o) => o.payment_status === 'approved').reduce((sum, o) => sum + (o.total_amount || 0), 0);
-  res.json(success({ total_orders: allOrders.length, pending_count, receipt_uploaded_count, approved_count, rejected_count, total_revenue_approved }));
+  const { data: statsResult, error: rpcErr } = await supabase.rpc('get_order_stats');
+  if (rpcErr || !statsResult) {
+    res.status(500).json(error('Failed to fetch stats'));
+    return;
+  }
+  res.json(success(statsResult));
 });
+
+router.post('/verify-scan-pin', async (req: Request, res: Response) => {
+  const { pin } = req.body;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword || pin !== adminPassword) {
+    res.status(401).json(error('Invalid PIN'));
+    return;
+  }
+  const token = generateToken('scanner');
+  res.json(success({ token }));
+});
+
+router.post('/gate-sales',
+  body('ticket_type_id').isUUID().withMessage('Valid ticket type ID is required'),
+  body('quantity').isInt({ min: 1, max: 10 }).withMessage('Quantity must be 1-10'),
+  body('buyer_name').trim().notEmpty().withMessage('Buyer name is required'),
+  body('buyer_email').isEmail().withMessage('Valid email is required'),
+  body('buyer_phone').trim().notEmpty().withMessage('Phone is required'),
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json(error(errors.array().map((e) => e.msg).join('; ')));
+      return;
+    }
+
+    const { ticket_type_id, quantity, buyer_name, buyer_email, buyer_phone, buyer_city } = req.body;
+
+    const { data: ticketType, error: ttErr } = await supabase
+      .from('ticket_types')
+      .select('*, events!inner(*)')
+      .eq('id', ticket_type_id)
+      .single();
+
+    if (ttErr || !ticketType) {
+      res.status(404).json(error('Ticket type not found'));
+      return;
+    }
+
+    if (ticketType.status !== 'active') {
+      res.status(400).json(error('Ticket type is not active'));
+      return;
+    }
+
+    if (ticketType.available_quantity < quantity) {
+      res.status(409).json(error('Not enough available tickets'));
+      return;
+    }
+
+    const total_amount = ticketType.price * quantity;
+    const ticket_id = generateTicketId();
+    const scan_token = generateScanToken();
+    const now = new Date().toISOString();
+
+    const { data: order, error: insertErr } = await supabase
+      .from('orders')
+      .insert({
+        ticket_type_id,
+        buyer_name,
+        buyer_email,
+        buyer_phone,
+        buyer_city: buyer_city || null,
+        quantity,
+        total_amount,
+        payment_method: 'cash',
+        payment_status: 'approved',
+        approved_at: now,
+        approved_by: 'admin',
+        ticket_id,
+        scan_token,
+      })
+      .select()
+      .single();
+
+    if (insertErr) {
+      console.error('Failed to create gate sale order:', insertErr);
+      res.status(500).json(error('Failed to create order'));
+      return;
+    }
+
+    const { error: decErr } = await supabase
+      .from('ticket_types')
+      .update({ available_quantity: ticketType.available_quantity - quantity })
+      .eq('id', ticket_type_id)
+      .eq('available_quantity', ticketType.available_quantity);
+
+    if (decErr) {
+      await supabase.from('orders').delete().eq('id', order.id);
+      console.error('Failed to decrement inventory:', decErr);
+      res.status(409).json(error('Inventory conflict, please retry'));
+      return;
+    }
+
+    const emailOrder: Order = {
+      id: order.id,
+      ticket_id: order.ticket_id,
+      scan_token: order.scan_token,
+      buyer_name: order.buyer_name,
+      buyer_email: order.buyer_email,
+      quantity: order.quantity,
+      total_amount: order.total_amount,
+      payment_method: 'cash',
+      ticket_types: ticketType,
+    };
+    sendTicketEmail(emailOrder).catch((err) => console.error(`Failed to send ticket email for gate sale ${order.id}:`, err));
+
+    res.json(success({
+      order_id: order.id,
+      ticket_id: order.ticket_id,
+      buyer_name: order.buyer_name,
+      ticket_type: ticketType.name,
+      event_name: ticketType.events?.name,
+      total_amount,
+    }));
+  });
 
 router.post('/resend/:order_id', async (req: Request, res: Response) => {
   const { order_id } = req.params;

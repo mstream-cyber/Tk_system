@@ -4,15 +4,16 @@ import multer from 'multer';
 import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
 import { authMiddleware } from '../middleware/auth';
+import { FILE } from '../lib/constants';
 
 const router = Router();
 router.use(authMiddleware);
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: FILE.MAX_UPLOAD_SIZE },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+    if (FILE.ALLOWED_BANNER_TYPES.includes(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error('Only JPG and PNG files are allowed'));

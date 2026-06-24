@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
+import { requireRole } from '../middleware/auth';
 
 const router = Router();
 
@@ -72,7 +73,7 @@ router.patch('/:ticket_id/scan', async (req, res) => {
   res.json(success({ message: 'Ticket marked as used', scanned_at: now }));
 });
 
-router.post('/scan', async (req, res) => {
+router.post('/scan', requireRole('admin', 'scanner'), async (req, res) => {
   const { token } = req.body;
 
   if (!token || typeof token !== 'string') {
@@ -140,6 +141,54 @@ router.post('/scan', async (req, res) => {
       scanned_at: now,
     },
   });
+});
+
+router.post('/reset-scan', requireRole('admin', 'scanner'), async (req, res) => {
+  const { token, resetPassword } = req.body;
+
+  if (!token || typeof token !== 'string') {
+    res.status(400).json(error('Token is required'));
+    return;
+  }
+
+  if (!resetPassword || typeof resetPassword !== 'string') {
+    res.status(400).json(error('Reset password is required'));
+    return;
+  }
+
+  if (!process.env.SCAN_RESET_PASSWORD) {
+    res.status(500).json(error('Scan reset feature not configured'));
+    return;
+  }
+
+  if (resetPassword !== process.env.SCAN_RESET_PASSWORD) {
+    res.status(403).json(error('Incorrect reset password'));
+    return;
+  }
+
+  const { data: order, error: fetchErr } = await supabase
+    .from('orders')
+    .select('id')
+    .eq('scan_token', token)
+    .single();
+
+  if (fetchErr || !order) {
+    res.status(404).json(error('Ticket not found'));
+    return;
+  }
+
+  const { error: updateErr } = await supabase
+    .from('orders')
+    .update({ scanned_at: null })
+    .eq('id', order.id);
+
+  if (updateErr) {
+    console.error('Failed to reset scan:', updateErr);
+    res.status(500).json(error('Failed to reset scan'));
+    return;
+  }
+
+  res.json(success({ message: 'Ticket scan reset successfully' }));
 });
 
 export default router;

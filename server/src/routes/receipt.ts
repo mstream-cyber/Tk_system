@@ -2,11 +2,12 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
+import { FILE } from '../lib/constants';
 
 const router = Router();
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
-const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_TYPES = FILE.ALLOWED_RECEIPT_TYPES;
+const MAX_SIZE = FILE.MAX_UPLOAD_SIZE;
 
 function detectMime(buffer: Buffer): string | null {
   if (buffer.length < 4) return null;
@@ -81,9 +82,7 @@ router.post(
 
       if (uploadErr) {
         console.error('Storage upload failed:', uploadErr);
-        // Rollback: delete the order if storage fails
-        await supabase.from('orders').delete().eq('id', order_id);
-        res.status(500).json(error('Booking failed — please try again'));
+        res.status(500).json(error('Receipt upload failed. Please try again.'));
         return;
       }
 
@@ -99,8 +98,7 @@ router.post(
       if (updateErr) {
         console.error('Failed to update order:', updateErr);
         await supabase.storage.from('payment-receipts').remove([storagePath]);
-        await supabase.from('orders').delete().eq('id', order_id);
-        res.status(500).json(error('Booking failed — please try again'));
+        res.status(500).json(error('Receipt upload failed. Please try again.'));
         return;
       }
 

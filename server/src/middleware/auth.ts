@@ -2,29 +2,54 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { error } from '../utils/response';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
-
 export interface AuthRequest extends Request {
   admin?: { role: string };
 }
 
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is not set');
+  }
+  return secret;
+}
+
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
+  const token = req.cookies?.admin_token || (() => {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith('Bearer ')) return null;
+    return header.split(' ')[1];
+  })();
+
+  if (!token) {
     res.status(401).json(error('Missing or invalid token'));
     return;
   }
 
-  const token = header.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { role: string };
+    const decoded = jwt.verify(token, getJwtSecret()) as { role: string };
     req.admin = decoded;
     next();
-  } catch {
+  } catch (err) {
+    console.error('Token verification failed:', err);
+    res.clearCookie('admin_token');
     res.status(401).json(error('Token expired or invalid'));
   }
 }
 
-export function generateToken(): string {
-  return jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '8h' });
+export function requireRole(...roles: string[]) {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    authMiddleware(req, res, () => {
+      if (!req.admin || !roles.includes(req.admin.role)) {
+        res.status(403).json(error('Insufficient permissions'));
+        return;
+      }
+      next();
+    });
+  };
+}
+
+export function generateToken(role: string = 'admin'): string {
+  const expiresIn = role === 'scanner' ? '15m' : '8h';
+  return jwt.sign({ role }, getJwtSecret(), { expiresIn });
 }

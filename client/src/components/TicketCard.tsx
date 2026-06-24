@@ -30,7 +30,7 @@ export default function TicketCard(props: TicketCardProps) {
   return (
     <div className="rounded-2xl overflow-hidden shadow-lg max-w-[400px] mx-auto">
       {/* Header band */}
-      <div className="bg-[#534AB7] px-5 pt-4 pb-5 text-white relative">
+      <div className="bg-[#534AB7] px-5 pt-4 pb-5 text-white">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-bold leading-tight">{props.eventName}</h3>

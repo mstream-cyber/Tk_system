@@ -260,22 +260,29 @@ export async function sendTicketEmail(order: Order) {
   const htmlBody = buildApprovalHtml(order, qrBase64);
 
   if (transport) {
-    try {
-      await transport.sendMail({
-        from: process.env.SMTP_FROM || 'noreply@globaltickets.com',
-        to: order.buyer_email,
-        subject,
-        html: htmlBody,
-        attachments: [{
-          filename: `ticket-${order.ticket_id}.pdf`,
-          content: pdfBuffer,
-          contentType: 'application/pdf',
-        }],
-      });
-      console.log(`Ticket email sent to ${order.buyer_email} for order ${order.id}`);
-    } catch (err) {
-      console.error(`Failed to send ticket email for order ${order.id}:`, err);
+    let lastError: Error | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, 1000));
+      try {
+        await transport.sendMail({
+          from: process.env.SMTP_FROM || 'noreply@globaltickets.com',
+          to: order.buyer_email,
+          subject,
+          html: htmlBody,
+          attachments: [{
+            filename: `ticket-${order.ticket_id}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf',
+          }],
+        });
+        console.log(`Ticket email sent to ${order.buyer_email} for order ${order.id}`);
+        return;
+      } catch (err) {
+        lastError = err as Error;
+        console.warn(`Email attempt ${attempt + 1}/3 failed for order ${order.id}:`, (err as Error).message);
+      }
     }
+    console.error(`Failed to send ticket email for order ${order.id} after 3 attempts:`, lastError);
   } else {
     console.log(`[EMAIL STUB] To: ${order.buyer_email}`);
     console.log(`[EMAIL STUB] Subject: ${subject}`);

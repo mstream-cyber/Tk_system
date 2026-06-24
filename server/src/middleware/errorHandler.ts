@@ -8,5 +8,8 @@ export function errorHandler(
   _next: NextFunction
 ) {
   console.error('Unhandled error:', err);
-  res.status(500).json(error(err.message || 'Internal server error'));
+  const message = process.env.NODE_ENV === 'production'
+    ? 'Internal server error'
+    : err.message;
+  res.status(500).json(error(message));
 }

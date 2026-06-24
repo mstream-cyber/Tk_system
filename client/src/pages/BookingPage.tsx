@@ -28,6 +28,7 @@ export default function BookingPage() {
   const [uploadFailed, setUploadFailed] = useState(false);
   const [statusChecked, setStatusChecked] = useState(false);
   const [statusResult, setStatusResult] = useState<'approved' | 'pending' | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [waitlistEmail, setWaitlistEmail] = useState('');
   const [waitlistMsg, setWaitlistMsg] = useState('');
   const [waitlistLoading, setWaitlistLoading] = useState(false);
@@ -46,7 +47,13 @@ export default function BookingPage() {
       .catch(console.error);
   }, []);
 
-  const event = events[0];
+  useEffect(() => {
+    if (events.length === 1 && !selectedEventId) {
+      setSelectedEventId(events[0].id);
+    }
+  }, [events, selectedEventId]);
+
+  const event = events.find((e) => e.id === selectedEventId) || null;
   const ticketTypes = (event?.ticket_types ?? [])
     .filter((tt) => tt.status === 'active')
     .sort((a, b) => a.sort_order - b.sort_order);
@@ -90,7 +97,6 @@ export default function BookingPage() {
     setUploadFailed(false);
     setUploadProgress(0);
 
-    // Client-side validation
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         setErrors((prev) => ({ ...prev, file: 'File exceeds 5 MB limit' }));
@@ -213,24 +219,27 @@ export default function BookingPage() {
   }, [booking]);
 
   const errClass = (key: string) =>
-    touched.has(key) && errors[key] ? 'border-red-400 focus:border-red-500' : 'border-gray-300 focus:border-purple-500';
+    touched.has(key) && errors[key] ? 'border-red-400 focus:border-red-500' : 'border-[#3a3f48] focus:border-purple-500';
 
   const StepDots = () => (
     <div className="flex items-center justify-center gap-0 mb-6">
       {[1, 2, 3].map((s) => (
         <div key={s} className="flex items-center">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step >= s ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'}`}>{s}</div>
-          {s < 3 && <div className={`w-12 sm:w-20 h-1 transition-colors ${step > s ? 'bg-purple-600' : 'bg-gray-200'}`} />}
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step >= s ? 'bg-purple-600 text-white' : 'bg-[#3a3f48] text-gray-500'}`}>{s}</div>
+          {s < 3 && <div className={`w-12 sm:w-20 h-1 transition-colors ${step > s ? 'bg-purple-600' : 'bg-[#3a3f48]'}`} />}
         </div>
       ))}
     </div>
   );
 
-  // ── Sold out state ────────────────────────────────
   if (allSoldOut) {
     return (
-      <div className="min-h-screen bg-gray-50 py-6 px-4">
+      <div className="min-h-screen bg-[#181b21] py-6 px-4">
         <div className="max-w-[480px] mx-auto">
+          <div className="relative flex items-center justify-center mb-6 min-h-[40px]">
+            <img src="/mslogo.png" alt="Logo" className="absolute left-0 h-10 w-auto" />
+            <h1 className="text-2xl font-bold text-white">Ticket Portal</h1>
+          </div>
           {event && (
             <div className="bg-gradient-to-r from-purple-700 to-indigo-800 text-white rounded-xl p-5 mb-6">
               {event.banner_url && (
@@ -244,28 +253,61 @@ export default function BookingPage() {
               )}
             </div>
           )}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 text-center">
-            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <div className="bg-[#232730] rounded-2xl shadow-sm border border-[#3a3f48] p-5 text-center">
+            <div className="w-16 h-16 rounded-full bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">Sold out</h2>
-            <p className="text-sm text-gray-500 mb-5">All tickets for this event are sold out. Join the waitlist to be notified if more become available.</p>
+            <h2 className="text-xl font-bold text-white mb-1">Sold out</h2>
+            <p className="text-sm text-gray-400 mb-5">All tickets for this event are sold out. Join the waitlist to be notified if more become available.</p>
             <div className="flex gap-2">
-              <input type="email" value={waitlistEmail} onChange={(e) => setWaitlistEmail(e.target.value)} placeholder="your@email.com" className="flex-1 px-3 py-2.5 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500" />
+              <input type="email" value={waitlistEmail} onChange={(e) => setWaitlistEmail(e.target.value)} placeholder="your@email.com" className="flex-1 px-3 py-2.5 rounded-lg border border-[#3a3f48] bg-[#2a2f36] text-gray-100 placeholder-gray-500 outline-none text-sm focus:border-purple-500" />
               <button onClick={handleJoinWaitlist} disabled={waitlistLoading || !waitlistEmail.trim()} className="px-4 py-2.5 rounded-lg bg-purple-600 text-white font-semibold text-sm hover:bg-purple-700 disabled:opacity-50 transition-colors shrink-0">
                 {waitlistLoading ? '...' : 'Join'}
               </button>
             </div>
-            {waitlistMsg && <p className="text-xs text-gray-500 mt-2">{waitlistMsg}</p>}
+            {waitlistMsg && <p className="text-xs text-gray-400 mt-2">{waitlistMsg}</p>}
           </div>
         </div>
       </div>
     );
   }
 
-  // ── Step 1: Booking Form ─────────────────────────
+  if (!event && events.length > 1) {
+    return (
+      <div className="min-h-screen bg-[#181b21] py-6 px-4">
+        <div className="max-w-[480px] mx-auto">
+          <div className="relative flex items-center justify-center mb-6 min-h-[40px]">
+            <img src="/mslogo.png" alt="Logo" className="absolute left-0 h-10 w-auto" />
+            <h1 className="text-2xl font-bold text-white">Ticket Portal</h1>
+          </div>
+          <div className="flex flex-col gap-4">
+            {events.map((e) => (
+              <button
+                key={e.id}
+                onClick={() => {
+                  setSelectedEventId(e.id);
+                  setForm(emptyForm);
+                  setTouched(new Set());
+                }}
+                className="bg-[#232730] rounded-2xl shadow-sm border border-[#3a3f48] p-5 text-left hover:border-purple-500 hover:shadow-lg transition-all"
+              >
+                {e.banner_url && (
+                  <img src={e.banner_url} alt={e.name} className="w-full h-36 object-cover rounded-xl mb-3" />
+                )}
+                <h2 className="text-lg font-bold text-white">{e.name}</h2>
+                <p className="text-sm text-gray-400 mt-1">{formatDate(e.date)}{e.time && ` · ${e.time}`}</p>
+                <p className="text-sm text-gray-400">{e.venue}, {e.city}</p>
+                {e.description && <p className="text-xs text-gray-500 mt-2 line-clamp-2">{e.description}</p>}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const renderStep1 = () => (
     <div>
       {event && (
@@ -282,28 +324,28 @@ export default function BookingPage() {
         </div>
       )}
 
-      <label className="block text-sm font-semibold text-gray-700 mb-2">Select Ticket Type</label>
+      <label className="block text-sm font-semibold text-gray-200 mb-2">Select Ticket Type</label>
       <div className="grid grid-cols-2 gap-3 mb-5">
         {ticketTypes.map((tt) => {
           const soldOut = tt.available_quantity === 0;
           const selected = form.ticketTypeId === tt.id;
           return (
             <button key={tt.id} type="button" disabled={soldOut} onClick={() => { set('ticketTypeId', tt.id); if (form.quantity > Math.min(tt.available_quantity, 5)) set('quantity', Math.min(tt.available_quantity, 5)); }}
-              className={`relative p-4 rounded-xl border-2 text-left transition-all ${soldOut ? 'border-gray-200 bg-gray-100 opacity-60 cursor-not-allowed' : selected ? 'border-purple-600 bg-purple-50 shadow-sm' : 'border-gray-200 bg-white hover:border-purple-300'}`}>
-              <div className="font-semibold text-gray-900">{tt.name}</div>
-              <div className="text-sm text-gray-600 mt-1">{formatPrice(tt.price)}</div>
+              className={`relative p-4 rounded-xl border-2 text-left transition-all ${soldOut ? 'border-[#3a3f48] bg-[#1a1e24] opacity-60 cursor-not-allowed' : selected ? 'border-purple-600 bg-[#232730] shadow-sm' : 'border-[#3a3f48] bg-[#232730] hover:border-purple-500'}`}>
+              <div className="font-semibold text-white">{tt.name}</div>
+              <div className="text-sm text-gray-400 mt-1">{formatPrice(tt.price)}</div>
               {tt.description && (
                 <p className="text-xs text-gray-500 mt-1">{tt.description}</p>
               )}
               {!soldOut && tt.available_quantity < 20 && (
-                <p className="text-xs text-amber-600 font-medium mt-1">Only {tt.available_quantity} left</p>
+                <p className="text-xs text-amber-400 font-medium mt-1">Only {tt.available_quantity} left</p>
               )}
-              {soldOut && <span className="absolute top-2 right-2 text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">Sold out</span>}
+              {soldOut && <span className="absolute top-2 right-2 text-xs font-bold text-red-400 bg-red-900/30 px-2 py-0.5 rounded">Sold out</span>}
             </button>
           );
         })}
       </div>
-      {touched.has('ticketTypeId') && errors.ticketTypeId && <p className="text-red-500 text-xs -mt-3 mb-3">{errors.ticketTypeId}</p>}
+      {touched.has('ticketTypeId') && errors.ticketTypeId && <p className="text-red-400 text-xs -mt-3 mb-3">{errors.ticketTypeId}</p>}
 
       <div className="space-y-4">
         {[
@@ -313,24 +355,24 @@ export default function BookingPage() {
           { key: 'buyerCity', label: 'City', type: 'text', placeholder: 'e.g. Karachi' },
         ].map(({ key, label, type, placeholder }) => (
           <div key={key}>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">{label}</label>
+            <label className="block text-sm font-semibold text-gray-200 mb-1">{label}</label>
             <input type={type} value={form[key as keyof FormData] as string} onChange={(e) => set(key as keyof FormData, e.target.value as never)} onBlur={() => setTouched((p) => new Set(p).add(key))}
-              className={`w-full px-3 py-2.5 rounded-lg border ${errClass(key)} outline-none text-sm`} placeholder={placeholder} />
-            {touched.has(key) && errors[key] && <p className="text-red-500 text-xs mt-1">{errors[key]}</p>}
+              className={`w-full px-3 py-2.5 rounded-lg border bg-[#2a2f36] text-gray-100 placeholder-gray-500 ${errClass(key)} outline-none text-sm`} placeholder={placeholder} />
+            {touched.has(key) && errors[key] && <p className="text-red-400 text-xs mt-1">{errors[key]}</p>}
           </div>
         ))}
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Number of Tickets</label>
-          <select value={form.quantity} onChange={(e) => set('quantity', Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg border border-gray-300 outline-none text-sm bg-white">
-            {Array.from({ length: maxQty }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+          <label className="block text-sm font-semibold text-gray-200 mb-1">Number of Tickets</label>
+          <select value={form.quantity} onChange={(e) => set('quantity', Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg border border-[#3a3f48] bg-[#2a2f36] text-gray-100 outline-none text-sm">
+            {Array.from({ length: maxQty }, (_, i) => i + 1).map((n) => <option key={n} value={n} className="bg-[#2a2f36]">{n}</option>)}
           </select>
         </div>
       </div>
 
-      <div className="mt-6 p-4 bg-gray-50 rounded-xl flex items-center justify-between">
-        <span className="text-sm font-semibold text-gray-700">Total</span>
-        <span className="text-xl font-bold text-purple-700">{formatPrice(liveTotal)}</span>
+      <div className="mt-6 p-4 bg-[#2a2f36] rounded-xl flex items-center justify-between">
+        <span className="text-sm font-semibold text-gray-200">Total</span>
+        <span className="text-xl font-bold text-purple-400">{formatPrice(liveTotal)}</span>
       </div>
 
       <button type="button" onClick={handleContinue} className="mt-5 w-full py-3 rounded-xl bg-purple-600 text-white font-bold text-base hover:bg-purple-700 transition-colors">
@@ -339,7 +381,6 @@ export default function BookingPage() {
     </div>
   );
 
-  // ── Step 2: Payment + Receipt Upload ──────────────
   const renderStep2 = () => (
     <div>
       <div className="bg-gradient-to-r from-purple-700 to-indigo-800 text-white rounded-xl p-5 mb-6 text-center">
@@ -347,76 +388,75 @@ export default function BookingPage() {
         <p className="text-3xl font-bold">{formatPrice(liveTotal)}</p>
       </div>
 
-      <label className="block text-sm font-semibold text-gray-700 mb-3">Select Payment Method</label>
+      <label className="block text-sm font-semibold text-gray-200 mb-3">Select Payment Method</label>
 
       <div className="grid grid-cols-2 gap-3 mb-5">
         <button type="button" onClick={() => set('paymentMethod', 'bank_transfer')}
-          className={`p-4 rounded-xl border-2 text-left transition-all ${form.paymentMethod === 'bank_transfer' ? 'border-purple-600 bg-purple-50 shadow-sm' : 'border-gray-200 bg-white hover:border-purple-300'}`}>
+          className={`p-4 rounded-xl border-2 text-left transition-all ${form.paymentMethod === 'bank_transfer' ? 'border-purple-600 bg-[#232730] shadow-sm' : 'border-[#3a3f48] bg-[#232730] hover:border-purple-500'}`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl">🏦</span>
-            <span className="font-semibold text-gray-900 text-sm">Bank Transfer</span>
-            <div className={`ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center ${form.paymentMethod === 'bank_transfer' ? 'border-purple-600' : 'border-gray-300'}`}>
+            <span className="font-semibold text-white text-sm">Bank Transfer</span>
+            <div className={`ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center ${form.paymentMethod === 'bank_transfer' ? 'border-purple-600' : 'border-[#3a3f48]'}`}>
               {form.paymentMethod === 'bank_transfer' && <div className="w-2.5 h-2.5 rounded-full bg-purple-600" />}
             </div>
           </div>
           {form.paymentMethod === 'bank_transfer' && (
-            <div className="mt-2 pt-2 border-t border-gray-200 space-y-1 text-xs text-gray-600">
-              <p><span className="font-medium">Bank:</span> {config?.bank_name || 'Meezan Bank'}</p>
-              <p><span className="font-medium">Title:</span> {config?.bank_account_title || 'Global Tickets Pvt Ltd'}</p>
-              <p><span className="font-medium">A/C:</span> {config?.bank_account_number || '0123-0123456789'}</p>
-              <p><span className="font-medium">IBAN:</span> {config?.bank_iban || 'PK00MEZN0001234567890'}</p>
+            <div className="mt-2 pt-2 border-t border-[#3a3f48] space-y-1 text-xs text-gray-400">
+              <p><span className="font-medium text-gray-300">Bank:</span> {config?.bank_name || 'Meezan Bank'}</p>
+              <p><span className="font-medium text-gray-300">Title:</span> {config?.bank_account_title || 'Global Tickets Pvt Ltd'}</p>
+              <p><span className="font-medium text-gray-300">A/C:</span> {config?.bank_account_number || '0123-0123456789'}</p>
+              <p><span className="font-medium text-gray-300">IBAN:</span> {config?.bank_iban || 'PK00MEZN0001234567890'}</p>
             </div>
           )}
         </button>
 
         <button type="button" onClick={() => set('paymentMethod', 'easypaisa')}
-          className={`p-4 rounded-xl border-2 text-left transition-all ${form.paymentMethod === 'easypaisa' ? 'border-purple-600 bg-purple-50 shadow-sm' : 'border-gray-200 bg-white hover:border-purple-300'}`}>
+          className={`p-4 rounded-xl border-2 text-left transition-all ${form.paymentMethod === 'easypaisa' ? 'border-purple-600 bg-[#232730] shadow-sm' : 'border-[#3a3f48] bg-[#232730] hover:border-purple-500'}`}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xl">📱</span>
-            <span className="font-semibold text-gray-900 text-sm">EasyPaisa</span>
-            <div className={`ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center ${form.paymentMethod === 'easypaisa' ? 'border-purple-600' : 'border-gray-300'}`}>
+            <span className="font-semibold text-white text-sm">EasyPaisa</span>
+            <div className={`ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center ${form.paymentMethod === 'easypaisa' ? 'border-purple-600' : 'border-[#3a3f48]'}`}>
               {form.paymentMethod === 'easypaisa' && <div className="w-2.5 h-2.5 rounded-full bg-purple-600" />}
             </div>
           </div>
           {form.paymentMethod === 'easypaisa' && (
-            <div className="mt-2 pt-2 border-t border-gray-200 space-y-1 text-xs text-gray-600">
-              <p><span className="font-medium">Title:</span> {config?.easypaisa_title || 'Global Tickets'}</p>
-              <p><span className="font-medium">Number:</span> {config?.easypaisa_number || '0300-0000000'}</p>
+            <div className="mt-2 pt-2 border-t border-[#3a3f48] space-y-1 text-xs text-gray-400">
+              <p><span className="font-medium text-gray-300">Title:</span> {config?.easypaisa_title || 'Global Tickets'}</p>
+              <p><span className="font-medium text-gray-300">Number:</span> {config?.easypaisa_number || '0300-0000000'}</p>
             </div>
           )}
         </button>
       </div>
 
       {form.paymentMethod && (
-        <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-          <p className="text-sm text-amber-800 font-medium">Transfer exactly {formatPrice(liveTotal)} to your chosen account. Then upload your payment receipt below.</p>
+        <div className="mb-5 p-4 bg-amber-900/20 border border-amber-800 rounded-xl">
+          <p className="text-sm text-amber-300 font-medium">Transfer exactly {formatPrice(liveTotal)} to your chosen account. Then upload your payment receipt below.</p>
         </div>
       )}
 
       {form.paymentMethod && (
         <div className="mb-5">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Upload Payment Receipt</label>
+          <label className="block text-sm font-semibold text-gray-200 mb-2">Upload Payment Receipt</label>
           <input type="file" accept="image/jpeg,image/png,application/pdf" onChange={handleFileChange}
-            className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer" />
-          {errors.file && <p className="text-red-500 text-xs mt-1">{errors.file}</p>}
-          {selectedFile && !errors.file && <p className="text-xs text-gray-500 mt-1">{selectedFile.name}</p>}
+            className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-900/40 file:text-purple-300 hover:file:bg-purple-800/40 cursor-pointer" />
+          {errors.file && <p className="text-red-400 text-xs mt-1">{errors.file}</p>}
+          {selectedFile && !errors.file && <p className="text-xs text-gray-400 mt-1">{selectedFile.name}</p>}
           {filePreview && selectedFile?.type.startsWith('image/') && (
-            <div className="mt-3"><img src={filePreview} alt="Receipt preview" className="max-h-48 rounded-lg border border-gray-200 object-contain" /></div>
+            <div className="mt-3"><img src={filePreview} alt="Receipt preview" className="max-h-48 rounded-lg border border-[#3a3f48] object-contain" /></div>
           )}
 
-          {/* Progress bar */}
           {uploadProgress > 0 && uploadProgress < 100 && (
-            <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+            <div className="mt-3 w-full bg-[#3a3f48] rounded-full h-2">
               <div className="bg-purple-600 h-2 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
             </div>
           )}
         </div>
       )}
 
-      {errors.api && <p className="text-red-500 text-sm text-center mt-2">{errors.api}</p>}
+      {errors.api && <p className="text-red-400 text-sm text-center mt-2">{errors.api}</p>}
 
       <div className="flex gap-3 mt-6">
-        <button type="button" onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors">Back</button>
+        <button type="button" onClick={() => setStep(1)} className="flex-1 py-3 rounded-xl border-2 border-[#3a3f48] text-gray-300 font-semibold text-sm hover:bg-[#2a2f36] transition-colors">Back</button>
         {uploadFailed ? (
           <button type="button" onClick={handleRetry} disabled={loading} className="flex-[2] py-3 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition-colors disabled:opacity-50">
             {loading ? 'Retrying...' : 'Retry Upload'}
@@ -430,19 +470,18 @@ export default function BookingPage() {
     </div>
   );
 
-  // ── Step 3: Pending Confirmation ──────────────────
   const renderStep3 = () => (
     <div className="text-center">
       {statusResult === 'approved' ? (
         <>
           <div className="mb-6">
-            <div className="w-20 h-20 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-4">
+            <div className="w-20 h-20 rounded-full bg-green-600 flex items-center justify-center mx-auto mb-4">
               <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Your ticket has been approved!</h2>
-            <p className="text-sm text-gray-600">Your ticket has been approved and sent to <strong>{form.buyerEmail}</strong>!</p>
+            <h2 className="text-2xl font-bold text-white mb-2">Your ticket has been approved!</h2>
+            <p className="text-sm text-gray-400">Your ticket has been approved and sent to <strong className="text-gray-200">{form.buyerEmail}</strong>!</p>
           </div>
           <a href={`/ticket/${booking?.ticket_id}`} className="block w-full py-3 rounded-xl bg-purple-600 text-white font-bold text-sm text-center hover:bg-purple-700 transition-colors mb-3">
             View Your Ticket
@@ -451,22 +490,22 @@ export default function BookingPage() {
       ) : (
         <>
           <div className="mb-6">
-            <div className="w-20 h-20 rounded-full bg-amber-400 flex items-center justify-center mx-auto mb-4">
+            <div className="w-20 h-20 rounded-full bg-amber-500 flex items-center justify-center mx-auto mb-4">
               <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Receipt submitted &mdash; we&apos;re reviewing it</h2>
+            <h2 className="text-2xl font-bold text-white">Receipt submitted &mdash; we&apos;re reviewing it</h2>
           </div>
 
-          <p className="text-sm text-gray-600 leading-relaxed mb-6">
-            Your booking reference is <strong>{booking?.ticket_id}</strong>. Once your payment is verified, your ticket will be emailed to <strong>{form.buyerEmail}</strong>. This usually takes up to 2 hours during business hours.
+          <p className="text-sm text-gray-400 leading-relaxed mb-6">
+            Your booking reference is <strong className="text-gray-200">{booking?.ticket_id}</strong>. Once your payment is verified, your ticket will be emailed to <strong className="text-gray-200">{form.buyerEmail}</strong>. This usually takes up to 2 hours during business hours.
           </p>
 
-          <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <p className="text-xs text-gray-500 mb-2 font-medium">SAVE YOUR BOOKING REFERENCE</p>
+          <div className="mb-4 p-4 bg-[#2a2f36] rounded-xl border border-[#3a3f48]">
+            <p className="text-xs text-gray-400 mb-2 font-medium">SAVE YOUR BOOKING REFERENCE</p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 text-center text-lg font-mono font-bold text-gray-900 bg-white rounded-lg border border-gray-200 py-2.5 px-3">{booking?.ticket_id}</code>
+              <code className="flex-1 text-center text-lg font-mono font-bold text-gray-100 bg-[#232730] rounded-lg border border-[#3a3f48] py-2.5 px-3">{booking?.ticket_id}</code>
               <button type="button" onClick={handleCopyRef} className="p-2.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors shrink-0" title="Copy booking reference">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
@@ -477,13 +516,13 @@ export default function BookingPage() {
 
           <p className="text-sm text-gray-500 mb-4">
             Questions?{' '}
-            <a href={`https://wa.me/${(config?.contact_whatsapp || '+923000000000').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-green-600 font-semibold hover:underline">
+            <a href={`https://wa.me/${(config?.contact_whatsapp || '+923000000000').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-green-400 font-semibold hover:underline">
               WhatsApp us at {config?.contact_whatsapp || '+92 300 0000000'}
             </a>
           </p>
 
           {statusChecked && statusResult === 'pending' && (
-            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+            <p className="text-sm text-amber-300 bg-amber-900/20 border border-amber-800 rounded-xl p-3 mb-4">
               Still under review &mdash; we&apos;ll email you soon.
             </p>
           )}
@@ -494,7 +533,7 @@ export default function BookingPage() {
         </>
       )}
 
-      <button type="button" onClick={handleReset} className="w-full py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors">
+      <button type="button" onClick={handleReset} className="w-full py-3 rounded-xl border-2 border-[#3a3f48] text-gray-300 font-semibold text-sm hover:bg-[#2a2f36] transition-colors">
         Book Another Ticket
       </button>
     </div>
@@ -502,23 +541,24 @@ export default function BookingPage() {
 
   if (loading && !uploadProgress) {
     return (
-      <div className="fixed inset-0 bg-white/80 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-[#181b21]/80 flex items-center justify-center z-50">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-600">Processing your booking...</p>
+          <p className="text-sm text-gray-400">Processing your booking...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4">
+    <div className="min-h-screen bg-[#181b21] py-6 px-4">
       <div className="max-w-[480px] mx-auto">
-        <div className="text-center mb-2">
-          <h1 className="text-2xl font-bold text-gray-900">Global Tickets</h1>
+        <div className="relative flex items-center justify-center mb-2 min-h-[40px]">
+          <img src="/mslogo.png" alt="Logo" className="absolute left-0 h-10 w-auto" />
+          <h1 className="text-2xl font-bold text-white">Ticket Portal</h1>
         </div>
         <StepDots />
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="bg-[#232730] rounded-2xl shadow-sm border border-[#3a3f48] p-5">
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}

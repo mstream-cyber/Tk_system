@@ -20,8 +20,7 @@ export default function AdminLogin() {
       });
       const data = await res.json();
 
-      if (data.success && data.data?.token) {
-        localStorage.setItem('admin_token', data.data.token);
+      if (data.success) {
         navigate('/admin/dashboard');
       } else {
         setError(data.error || 'Login failed');

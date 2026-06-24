@@ -38,6 +38,10 @@ interface Stats {
   approved_count: number;
   rejected_count: number;
   total_revenue_approved: number;
+  gate_sales_count: number;
+  online_sales_count: number;
+  gate_revenue: number;
+  online_revenue: number;
 }
 
 interface TicketTypeAdmin {
@@ -92,11 +96,6 @@ function formatDate(iso: string) {
   return d.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('admin_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 export default function AdminDashboard() {
   const navigate = useNavigate();
 
@@ -106,12 +105,17 @@ export default function AdminDashboard() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterSearch, setFilterSearch] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [filterMethod, setFilterMethod] = useState('');
   const [rejectInputs, setRejectInputs] = useState<Record<string, string>>({});
   const [rejectingId, setRejectingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'orders' | 'events'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'events' | 'gate_sale'>('orders');
   const [showScanModal, setShowScanModal] = useState(false);
   const [scanPin, setScanPin] = useState('');
   const [scanPinError, setScanPinError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const limit = 50;
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [events, setEvents] = useState<EventAdmin[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventAdmin | null>(null);
@@ -120,28 +124,30 @@ export default function AdminDashboard() {
   const [editingEvent, setEditingEvent] = useState<EventAdmin | null>(null);
   const [editingTicketType, setEditingTicketType] = useState<TicketTypeAdmin | null>(null);
 
+  const [gateSaleEventId, setGateSaleEventId] = useState('');
+  const [gateSaleTicketTypeId, setGateSaleTicketTypeId] = useState('');
+  const [gateSaleQuantity, setGateSaleQuantity] = useState(1);
+  const [gateSaleBuyerName, setGateSaleBuyerName] = useState('');
+  const [gateSaleBuyerEmail, setGateSaleBuyerEmail] = useState('');
+  const [gateSaleBuyerPhone, setGateSaleBuyerPhone] = useState('');
+  const [gateSaleLoading, setGateSaleLoading] = useState(false);
+  const [gateSaleResult, setGateSaleResult] = useState<{ ticket_id: string; order_id: string; buyer_name: string; ticket_type: string; event_name: string; total_amount: number } | null>(null);
+  const [gateSaleError, setGateSaleError] = useState('');
+
   const checkAuth = useCallback(() => {
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
-      navigate('/admin/login', { replace: true });
-      return false;
-    }
     return true;
-  }, [navigate]);
+  }, []);
 
   const apiFetch = useCallback(async (url: string, options?: RequestInit) => {
-    if (!checkAuth()) return null;
     try {
       const res = await fetch(url, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          ...getAuthHeaders(),
           ...(options?.headers || {}),
         },
       });
       if (res.status === 401) {
-        localStorage.removeItem('admin_token');
         navigate('/admin/login', { replace: true });
         return null;
       }
@@ -149,37 +155,52 @@ export default function AdminDashboard() {
     } catch {
       return null;
     }
-  }, [checkAuth, navigate]);
+  }, [navigate]);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
     if (filterStatus) params.set('status', filterStatus);
-    if (filterSearch) params.set('search', filterSearch);
+    if (debouncedSearch) params.set('search', debouncedSearch);
     if (filterType) params.set('type', filterType);
+    if (filterMethod) params.set('method', filterMethod);
+    params.set('page', String(page));
+    params.set('limit', String(limit));
 
     const data = await apiFetch(`/api/admin/orders?${params}`);
-    if (data?.success && data.data) setOrders(data.data);
+    if (data?.success && data.data) {
+      setOrders(data.data.orders);
+      setTotalOrders(data.data.total);
+    }
     setLoading(false);
-  }, [apiFetch, filterStatus, filterSearch, filterType]);
+  }, [apiFetch, filterStatus, debouncedSearch, filterType, page]);
 
   const fetchStats = useCallback(async () => {
     const data = await apiFetch('/api/admin/stats');
     if (data?.success && data.data) setStats(data.data);
   }, [apiFetch]);
 
-  // Auth check on mount only
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(filterSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [filterSearch]);
+
   useEffect(() => {
     if (!checkAuth()) return;
     fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-fetch orders whenever filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filterSearch]);
+
   useEffect(() => {
     fetchOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterStatus, filterSearch, filterType]);
+  }, [filterStatus, debouncedSearch, filterType, filterMethod, page]);
 
   const handleApprove = useCallback(async (order: OrderType) => {
     if (!window.confirm(`Approve and send ticket to ${order.buyer_email}?`)) return;
@@ -216,14 +237,9 @@ export default function AdminDashboard() {
   }, [apiFetch]);
 
   const handleExport = useCallback(async () => {
-    const token = localStorage.getItem('admin_token');
-    if (!token) return;
     try {
-      const res = await fetch('/api/admin/export', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch('/api/admin/export');
       if (res.status === 401) {
-        localStorage.removeItem('admin_token');
         navigate('/admin/login', { replace: true });
         return;
       }
@@ -247,22 +263,25 @@ export default function AdminDashboard() {
   }, [apiFetch]);
 
   const handleLogout = useCallback(() => {
-    localStorage.removeItem('admin_token');
     navigate('/admin/login', { replace: true });
   }, [navigate]);
 
-  const handleScanAccess = useCallback(() => {
+  const handleScanAccess = useCallback(async () => {
     const entered = scanPin.trim();
-    const correct = import.meta.env.VITE_SCAN_PIN || '0000';
-    if (entered === correct) {
+    if (!entered) return;
+    const data = await apiFetch('/api/admin/verify-scan-pin', {
+      method: 'POST',
+      body: JSON.stringify({ pin: entered }),
+    });
+    if (data?.success && data.data?.token) {
       setShowScanModal(false);
       setScanPin('');
       setScanPinError('');
-      window.open('/scan', '_blank', 'noopener');
+      window.open(`/scan?token=${data.data.token}`, '_blank', 'noopener');
     } else {
-      setScanPinError('Incorrect PIN');
+      setScanPinError('Invalid PIN');
     }
-  }, [scanPin]);
+  }, [scanPin, apiFetch]);
 
   const fetchAdminEvents = useCallback(async () => {
     setEventsLoading(true);
@@ -272,7 +291,7 @@ export default function AdminDashboard() {
   }, [apiFetch]);
 
   useEffect(() => {
-    if (activeTab === 'events') fetchAdminEvents();
+    if (activeTab === 'events' || activeTab === 'gate_sale') fetchAdminEvents();
   }, [activeTab]);
 
   const handleDeleteEvent = useCallback(async (eventId: string) => {
@@ -338,7 +357,7 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Tab bar */}
         <div className="flex gap-1 mb-6 bg-gray-800 rounded-xl p-1 border border-gray-700 w-fit">
-          {(['orders', 'events'] as const).map((tab) => (
+          {(['orders', 'events', 'gate_sale'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -346,7 +365,7 @@ export default function AdminDashboard() {
                 activeTab === tab ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'
               }`}
             >
-              {tab === 'orders' ? 'Orders' : 'Events'}
+              {tab === 'orders' ? 'Orders' : tab === 'events' ? 'Events' : 'Gate Sale'}
             </button>
           ))}
         </div>
@@ -361,6 +380,8 @@ export default function AdminDashboard() {
                 <StatCard label="Approved" value={stats.approved_count} color="text-green-400" />
                 <StatCard label="Rejected" value={stats.rejected_count} color="text-red-400" />
                 <StatCard label="Revenue" value={formatPrice(stats.total_revenue_approved)} color="text-purple-400" />
+                <StatCard label="Gate sales" value={stats.gate_sales_count ?? 0} color="text-cyan-400" />
+                <StatCard label="Online sales" value={stats.online_sales_count ?? 0} color="text-blue-400" />
               </div>
             )}
 
@@ -406,6 +427,20 @@ export default function AdminDashboard() {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Method</label>
+                <select
+                  value={filterMethod}
+                  onChange={(e) => setFilterMethod(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-gray-600 bg-gray-800 text-white outline-none text-sm focus:border-purple-500"
+                >
+                  <option value="">All</option>
+                  <option value="cash">Cash</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="easypaisa">EasyPaisa</option>
+                </select>
+              </div>
+
               <button
                 onClick={handleExport}
                 className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors"
@@ -413,6 +448,46 @@ export default function AdminDashboard() {
                 Export CSV
               </button>
             </div>
+
+            {/* Pagination */}
+            {totalOrders > limit && (
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs text-gray-400">
+                  Showing {((page - 1) * limit) + 1}–{Math.min(page * limit, totalOrders)} of {totalOrders}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-3 py-1.5 rounded-lg bg-gray-700 text-white text-xs font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+                  {Array.from({ length: Math.ceil(totalOrders / limit) }, (_, i) => i + 1)
+                    .filter(p => Math.abs(p - page) <= 2 || p === 1 || p === Math.ceil(totalOrders / limit))
+                    .map((p, i, arr) => (
+                      <span key={p} className="flex items-center gap-1">
+                        {i > 0 && arr[i - 1] !== p - 1 && <span className="text-gray-600 text-xs">...</span>}
+                        <button
+                          onClick={() => setPage(p)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                            p === page ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      </span>
+                    ))}
+                  <button
+                    onClick={() => setPage(p => Math.min(Math.ceil(totalOrders / limit), p + 1))}
+                    disabled={page >= Math.ceil(totalOrders / limit)}
+                    className="px-3 py-1.5 rounded-lg bg-gray-700 text-white text-xs font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Orders table */}
             <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-x-auto">
@@ -457,7 +532,14 @@ export default function AdminDashboard() {
                       <td className="px-4 py-3 text-gray-300">{order.ticket_types?.name || '—'}</td>
                       <td className="px-4 py-3 text-center text-white">{order.quantity}</td>
                       <td className="px-4 py-3 text-right text-white text-xs">{formatPrice(order.total_amount)}</td>
-                      <td className="px-4 py-3 text-gray-300 text-xs capitalize">{order.payment_method.replace('_', ' ')}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-1.5 text-xs">
+                          <span className="capitalize text-gray-300">{order.payment_method === 'cash' ? 'Cash' : order.payment_method.replace('_', ' ')}</span>
+                          {order.payment_method === 'cash' && (
+                            <span className="px-1.5 py-0.5 rounded bg-cyan-900 text-cyan-300 text-[10px] font-semibold">Gate</span>
+                          )}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[order.payment_status] || 'bg-gray-100 text-gray-600'}`}>
                           {STATUS_LABELS[order.payment_status] || order.payment_status}
@@ -550,6 +632,172 @@ export default function AdminDashboard() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'gate_sale' && (
+          <>
+            <div className="max-w-lg mx-auto">
+              <h2 className="text-white text-lg font-bold mb-4">Gate Sale</h2>
+              {gateSaleResult ? (
+                <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+                  <div className="bg-green-600 px-5 py-4 text-center">
+                    <svg className="w-10 h-10 text-white mx-auto mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <h3 className="text-white font-bold text-lg">Ticket Sold</h3>
+                  </div>
+                  <div className="p-5 space-y-2">
+                    <p className="text-gray-300 text-sm">{gateSaleResult.event_name} — <span className="text-purple-400 font-semibold">{gateSaleResult.ticket_type}</span></p>
+                    <p className="text-white font-semibold">{gateSaleResult.buyer_name}</p>
+                    <p className="text-gray-400 text-xs">Ticket ID: <span className="font-mono text-gray-300">{gateSaleResult.ticket_id}</span></p>
+                    <p className="text-gray-400 text-xs">Amount: <span className="text-green-400">{formatPrice(gateSaleResult.total_amount)}</span></p>
+                    <div className="flex gap-2 mt-4">
+                      <a
+                        href={`/ticket/${gateSaleResult.ticket_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold text-center hover:bg-blue-700 transition-colors"
+                      >
+                        View Ticket
+                      </a>
+                      <button
+                        onClick={() => { setGateSaleResult(null); setGateSaleEventId(''); setGateSaleTicketTypeId(''); }}
+                        className="flex-1 py-2.5 rounded-lg bg-gray-700 text-gray-300 text-sm font-semibold hover:bg-gray-600 transition-colors"
+                      >
+                        Sell Another
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setGateSaleError('');
+                    setGateSaleLoading(true);
+                    const data = await apiFetch('/api/admin/gate-sales', {
+                      method: 'POST',
+                      body: JSON.stringify({
+                        ticket_type_id: gateSaleTicketTypeId,
+                        quantity: gateSaleQuantity,
+                        buyer_name: gateSaleBuyerName.trim(),
+                        buyer_email: gateSaleBuyerEmail.trim(),
+                        buyer_phone: gateSaleBuyerPhone.trim(),
+                      }),
+                    });
+                    setGateSaleLoading(false);
+                    if (data?.success && data.data) {
+                      setGateSaleResult(data.data);
+                      setGateSaleBuyerName('');
+                      setGateSaleBuyerEmail('');
+                      setGateSaleBuyerPhone('');
+                      setGateSaleQuantity(1);
+                      fetchOrders();
+                      const statsData = await apiFetch('/api/admin/stats');
+                      if (statsData?.success && statsData.data) setStats(statsData.data);
+                    } else if (data) {
+                      setGateSaleError(data.error || 'Sale failed');
+                    } else {
+                      setGateSaleError('Network error');
+                    }
+                  }}
+                  className="bg-gray-800 rounded-xl border border-gray-700 p-5 space-y-4"
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Event</label>
+                      <select
+                        value={gateSaleEventId}
+                        onChange={(e) => { setGateSaleEventId(e.target.value); setGateSaleTicketTypeId(''); }}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-800 text-white outline-none text-sm focus:border-purple-500"
+                        required
+                      >
+                        <option value="">Select event</option>
+                        {events.map((ev) => (
+                          <option key={ev.id} value={ev.id}>{ev.name} — {formatDate(ev.date)}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Ticket Type</label>
+                      <select
+                        value={gateSaleTicketTypeId}
+                        onChange={(e) => setGateSaleTicketTypeId(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-800 text-white outline-none text-sm focus:border-purple-500"
+                        required
+                        disabled={!gateSaleEventId}
+                      >
+                        <option value="">Select type</option>
+                        {events
+                          .find((ev) => ev.id === gateSaleEventId)
+                          ?.ticket_types?.filter((tt) => tt.status === 'active')
+                          .map((tt) => (
+                            <option key={tt.id} value={tt.id}>
+                              {tt.name} — {formatPrice(tt.price)} ({tt.available_quantity} left)
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Qty</label>
+                      <input
+                        type="number"
+                        value={gateSaleQuantity}
+                        onChange={(e) => setGateSaleQuantity(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                        min={1}
+                        max={10}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-800 text-white outline-none text-sm focus:border-purple-500"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Buyer Name</label>
+                      <input
+                        type="text"
+                        value={gateSaleBuyerName}
+                        onChange={(e) => setGateSaleBuyerName(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-800 text-white outline-none text-sm focus:border-purple-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Email</label>
+                      <input
+                        type="email"
+                        value={gateSaleBuyerEmail}
+                        onChange={(e) => setGateSaleBuyerEmail(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-800 text-white outline-none text-sm focus:border-purple-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Phone</label>
+                      <input
+                        type="tel"
+                        value={gateSaleBuyerPhone}
+                        onChange={(e) => setGateSaleBuyerPhone(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-800 text-white outline-none text-sm focus:border-purple-500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {gateSaleError && (
+                    <p className="text-red-400 text-sm text-center">{gateSaleError}</p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={gateSaleLoading || !gateSaleTicketTypeId}
+                    className="w-full py-3 rounded-lg bg-green-600 text-white font-bold text-sm hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {gateSaleLoading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : 'Sell at Gate'}
+                  </button>
+                </form>
+              )}
             </div>
           </>
         )}

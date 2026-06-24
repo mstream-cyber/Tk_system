@@ -9,3 +9,4 @@ ECCTools/
 
 # Supabase temp files
 supabase/.temp/
+.vercel
