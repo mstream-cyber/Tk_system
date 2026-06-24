@@ -2,9 +2,25 @@
   "name": "global-tickets",
   "private": true,
   "scripts": {
-    "build": "cd server && npm install && cd ../client && npm install && npm run build",
-    "vercel-build": "cd server && npm install && cd ../client && npm install && npm run build",
+    "build": "npm install && cd client && npm install && npm run build",
+    "vercel-build": "npm install && cd client && npm install && npm run build",
     "dev": "concurrently \"cd server && npm run dev\" \"cd client && npm run dev\""
   },
-  "dependencies": {}
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.5.2",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "jspdf": "^2.5.2",
+    "morgan": "^1.11.0",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.10",
+    "qrcode": "^1.5.4",
+    "uuid": "^11.0.0"
+  }
 }
