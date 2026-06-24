@@ -2,6 +2,7 @@
   "name": "global-tickets",
   "private": true,
   "scripts": {
+    "build": "cd server && npm install && cd ../client && npm install && npm run build",
     "vercel-build": "cd server && npm install && cd ../client && npm install && npm run build",
     "dev": "concurrently \"cd server && npm run dev\" \"cd client && npm run dev\""
   },

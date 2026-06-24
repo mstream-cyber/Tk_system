@@ -78,12 +78,14 @@ app.use('/api/waitlist', waitlistRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/admin/events', adminEventsRouter);
 
-const clientDist = path.join(__dirname, '../../client/dist');
-app.use(express.static(clientDist));
+if (!process.env.VERCEL) {
+  const clientDist = path.join(__dirname, '../../client/dist');
+  app.use(express.static(clientDist));
 
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(clientDist, 'index.html'));
-});
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
 
 app.use(errorHandler);
 
