@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { fetchEvents, createBooking, uploadReceiptWithProgress, getOrderStatus, fetchConfig, joinWaitlist } from '../api';
 import { formatPrice, formatDate } from '../utils/format';
 import type { EventType, FormData, BookingData, PaymentConfig } from '../types';
@@ -21,6 +22,8 @@ const emptyForm: FormData = {
 };
 
 export default function BookingPage() {
+  const [searchParams] = useSearchParams();
+  const urlEventId = searchParams.get('eventId');
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [events, setEvents] = useState<EventType[]>([]);
   const [config, setConfig] = useState<PaymentConfig | null>(null);
@@ -53,6 +56,17 @@ export default function BookingPage() {
       .then((res) => { if (res.success && res.data) setConfig(res.data); })
       .catch(console.error);
   }, []);
+
+  useEffect(() => {
+    if (urlEventId && events.length > 0 && !selectedEventId) {
+      const match = events.find((e) => e.id === urlEventId);
+      if (match) {
+        setSelectedEventId(urlEventId);
+      }
+    } else if (events.length === 1 && !selectedEventId && !urlEventId) {
+      setSelectedEventId(events[0].id);
+    }
+  }, [events, urlEventId, selectedEventId]);
 
   const event = events.find((e) => e.id === selectedEventId) || null;
   const ticketTypes = (event?.ticket_types ?? [])
@@ -292,14 +306,10 @@ export default function BookingPage() {
           <LogoHeader />
           <div className="flex flex-col gap-4">
             {events.map((e) => (
-              <button
+              <Link
                 key={e.id}
-                onClick={() => {
-                  setSelectedEventId(e.id);
-                  setForm(emptyForm);
-                  setTouched(new Set());
-                }}
-                className="bg-card rounded-2xl border border-border p-5 text-left hover:border-accent hover:shadow-lg transition-all"
+                to={`/event/${e.id}`}
+                className="bg-card rounded-2xl border border-border p-5 text-left hover:border-accent hover:shadow-lg transition-all block"
               >
                 {e.banner_url && (
                   <img src={e.banner_url} alt={e.name} className="w-full h-36 object-cover rounded-xl mb-3" loading="lazy" />
@@ -308,7 +318,7 @@ export default function BookingPage() {
                 <p className="text-sm text-content-muted mt-1">{formatDate(e.date)}{e.time && ` · ${e.time}`}</p>
                 <p className="text-sm text-content-muted">{e.venue}, {e.city}</p>
                 {e.description && <p className="text-xs text-content-placeholder mt-2 line-clamp-2">{e.description}</p>}
-              </button>
+              </Link>
             ))}
           </div>
         </div>

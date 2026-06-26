@@ -9,6 +9,7 @@ const TicketPage = lazy(() => import('./pages/TicketPage'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const ScanPage = lazy(() => import('./pages/ScanPage'));
+const EventPage = lazy(() => import('./pages/EventPage'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function RouteFallback() {
@@ -31,6 +32,7 @@ export default function App() {
               <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/event/:id" element={<EventPage />} />
               <Route path="/scan" element={<ScanPage />} />
               <Route path="/404" element={<NotFound />} />
               <Route path="*" element={<NotFound />} />
