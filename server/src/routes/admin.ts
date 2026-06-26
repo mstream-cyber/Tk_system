@@ -134,8 +134,8 @@ router.post('/verify-scan-pin', scanPinLimiter, (req: Request, res: Response) =>
     res.status(400).json(error('PIN is required'));
     return;
   }
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword || pin !== adminPassword) {
+  const scanPin = process.env.SCAN_PIN;
+  if (!scanPin || pin !== scanPin) {
     res.status(401).json(error('Invalid PIN'));
     return;
   }
