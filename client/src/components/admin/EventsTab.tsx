@@ -33,6 +33,9 @@ interface EventAdmin {
   poster_url: string | null;
   status: 'draft' | 'published' | 'cancelled';
   max_tickets_per_order: number;
+  organizer_phone: string | null;
+  location_link: string | null;
+  terms_conditions: string | null;
   created_at: string;
   ticket_types: TicketTypeAdmin[];
 }

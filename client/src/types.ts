@@ -10,6 +10,9 @@ export interface EventType {
   poster_url: string | null;
   status: string;
   max_tickets_per_order: number;
+  organizer_phone: string | null;
+  location_link: string | null;
+  terms_conditions: string | null;
   created_at: string;
   ticket_types: TicketType[];
 }
@@ -79,6 +82,9 @@ export interface TicketOrder {
         venue: string;
         city: string;
         banner_url: string | null;
+        organizer_phone: string | null;
+        location_link: string | null;
+        terms_conditions: string | null;
       };
   };
 }

@@ -13,6 +13,9 @@ export interface OrderEvent {
   date?: string;
   venue?: string;
   city?: string;
+  organizer_phone?: string;
+  location_link?: string;
+  terms_conditions?: string;
 }
 
 export interface Order {
@@ -184,6 +187,10 @@ export async function generateTicketPDF(order: Order, qrBase64: string): Promise
   return Buffer.from(doc.output('arraybuffer'));
 }
 
+function logoUrl(): string {
+  return `${process.env.SUPABASE_URL || ''}/storage/v1/object/public/logos/portal-logo.png`;
+}
+
 function buildApprovalHtml(order: Order, qrBase64: string): string {
   const event = order.ticket_types?.events;
   const eventName = escapeHtml(event?.name || 'Event');
@@ -192,6 +199,9 @@ function buildApprovalHtml(order: Order, qrBase64: string): string {
   const venue = escapeHtml(event?.venue || '—');
   const city = escapeHtml(event?.city || '');
   const ticketType = escapeHtml(order.ticket_types?.name || 'Ticket');
+  const organizerPhone = order.ticket_types?.events?.organizer_phone;
+  const locationLink = order.ticket_types?.events?.location_link;
+  const termsConditions = order.ticket_types?.events?.terms_conditions;
   const ticketUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/ticket/${escapeHtml(order.ticket_id)}`;
 
   return `
@@ -200,7 +210,8 @@ function buildApprovalHtml(order: Order, qrBase64: string): string {
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f4f4f8;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:20px auto;background:#ffffff;border-radius:12px;overflow:hidden;">
-<tr><td style="background:#534AB7;padding:28px 24px;text-align:center;">
+<tr><td style="background:#534AB7;padding:24px;text-align:center;">
+  <img src="${logoUrl()}" alt="Mawj stream" style="height:36px;width:auto;margin-bottom:12px;" />
   <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;">Your Ticket is Confirmed!</h1>
   <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">${eventName}</p>
 </td></tr>
@@ -211,18 +222,25 @@ function buildApprovalHtml(order: Order, qrBase64: string): string {
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;width:110px;">Event</td><td style="padding:6px 12px;font-size:14px;color:#222;font-weight:bold;">${eventName}</td></tr>
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Date</td><td style="padding:6px 12px;font-size:14px;color:#222;">${dateStr}${timeStr ? ` at ${timeStr}` : ''}</td></tr>
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Venue</td><td style="padding:6px 12px;font-size:14px;color:#222;">${venue}${city ? `, ${city}` : ''}</td></tr>
+    ${locationLink ? `<tr><td style="padding:6px 12px;font-size:13px;color:#888;">Location</td><td style="padding:6px 12px;font-size:14px;color:#222;"><a href="${escapeHtml(locationLink)}" style="color:#534AB7;text-decoration:underline;">Open in Google Maps</a></td></tr>` : ''}
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Ticket Type</td><td style="padding:6px 12px;font-size:14px;color:#222;">${ticketType}</td></tr>
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Ticket ID</td><td style="padding:6px 12px;font-size:14px;color:#222;font-family:monospace;">${order.ticket_id}</td></tr>
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Qty</td><td style="padding:6px 12px;font-size:14px;color:#222;">${order.quantity}</td></tr>
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Total Paid</td><td style="padding:6px 12px;font-size:14px;color:#222;font-weight:bold;">${formatPkr(order.total_amount)}</td></tr>
+    ${organizerPhone ? `<tr><td style="padding:6px 12px;font-size:13px;color:#888;">Questions?</td><td style="padding:6px 12px;font-size:14px;color:#222;">${escapeHtml(organizerPhone)}</td></tr>` : ''}
   </table>
+  ${termsConditions ? `
+  <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:20px 0;">
+    <p style="margin:0 0 6px;font-size:12px;color:#92400e;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">Terms &amp; Conditions</p>
+    <p style="margin:0;font-size:13px;color:#78350f;line-height:1.5;">${escapeHtml(termsConditions)}</p>
+  </div>` : ''}
   <div style="text-align:center;margin:24px 0 12px;">
     <a href="${ticketUrl}" style="display:inline-block;background:#534AB7;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:bold;">View &amp; Download Your Ticket</a>
   </div>
   <p style="text-align:center;margin:0;font-size:13px;color:#888;">Your PDF ticket is also attached to this email.</p>
 </td></tr>
 <tr><td style="background:#1a1a2e;padding:16px 24px;text-align:center;">
-  <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.5);">Global Tickets — Secure Ticket</p>
+  <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.5);">Mawj stream Ticket Portal</p>
 </td></tr>
 </table>
 </body>
@@ -236,7 +254,8 @@ function buildRejectionHtml(order: Order, reason: string): string {
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f4f4f8;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:20px auto;background:#ffffff;border-radius:12px;overflow:hidden;">
-<tr><td style="background:#dc2626;padding:28px 24px;text-align:center;">
+<tr><td style="background:#dc2626;padding:24px;text-align:center;">
+  <img src="${logoUrl()}" alt="Mawj stream" style="height:36px;width:auto;margin-bottom:12px;" />
   <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;">Payment Not Verified</h1>
   <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">Booking: ${escapeHtml(order.ticket_id)}</p>
 </td></tr>
@@ -252,7 +271,7 @@ function buildRejectionHtml(order: Order, reason: string): string {
   </div>
 </td></tr>
 <tr><td style="background:#1a1a2e;padding:16px 24px;text-align:center;">
-  <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.5);">Global Tickets</p>
+  <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.5);">Mawj stream Ticket Portal</p>
 </td></tr>
 </table>
 </body>

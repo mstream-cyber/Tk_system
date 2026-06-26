@@ -1,0 +1,3 @@
+ALTER TABLE events ADD COLUMN IF NOT EXISTS organizer_phone TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS location_link TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS terms_conditions TEXT;

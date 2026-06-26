@@ -15,6 +15,9 @@ interface EventFormEvent {
   poster_url: string | null;
   status: 'draft' | 'published' | 'cancelled';
   max_tickets_per_order: number;
+  organizer_phone: string | null;
+  location_link: string | null;
+  terms_conditions: string | null;
   created_at: string;
   ticket_types: unknown[];
 }
@@ -35,6 +38,9 @@ export default function EventForm({ event, onClose, onSaved, apiFetch }: EventFo
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'draft' | 'published' | 'cancelled'>('draft');
   const [maxTicketsPerOrder, setMaxTicketsPerOrder] = useState(10);
+  const [organizerPhone, setOrganizerPhone] = useState('');
+  const [locationLink, setLocationLink] = useState('');
+  const [termsConditions, setTermsConditions] = useState('');
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,6 +58,9 @@ export default function EventForm({ event, onClose, onSaved, apiFetch }: EventFo
       setDescription(event.description || '');
       setStatus(event.status);
       setMaxTicketsPerOrder(event.max_tickets_per_order);
+      setOrganizerPhone(event.organizer_phone || '');
+      setLocationLink(event.location_link || '');
+      setTermsConditions(event.terms_conditions || '');
       if (event.banner_url) setBannerPreview(event.banner_url);
     }
   }, [event]);
@@ -81,6 +90,9 @@ export default function EventForm({ event, onClose, onSaved, apiFetch }: EventFo
         description: description.trim() || undefined,
         status,
         max_tickets_per_order: maxTicketsPerOrder,
+        organizer_phone: organizerPhone.trim() || undefined,
+        location_link: locationLink.trim() || undefined,
+        terms_conditions: termsConditions.trim() || undefined,
       };
 
       let newEventId: string | null = null;
@@ -228,6 +240,35 @@ export default function EventForm({ event, onClose, onSaved, apiFetch }: EventFo
             min={1}
             max={20}
           />
+
+          <Input
+            label="Organizer phone (for queries)"
+            type="tel"
+            value={organizerPhone}
+            onChange={(e) => setOrganizerPhone(e.target.value)}
+            placeholder="e.g. 03XX-XXXXXXX"
+          />
+
+          <Input
+            label="Google Maps link"
+            type="url"
+            value={locationLink}
+            onChange={(e) => setLocationLink(e.target.value)}
+            placeholder="https://maps.google.com/..."
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-content-secondary mb-1">
+              Terms &amp; Conditions
+            </label>
+            <textarea
+              value={termsConditions}
+              onChange={(e) => setTermsConditions(e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-input text-content outline-none text-sm focus:border-accent resize-none placeholder-content-placeholder"
+              placeholder="e.g. No refunds after 24 hours of purchase."
+            />
+          </div>
 
           <Select
             label="Status"

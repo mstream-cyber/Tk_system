@@ -92,7 +92,7 @@ router.post('/scan', requireRole('admin', 'scanner'), async (req, res) => {
       scanned_at,
       ticket_types (
         name,
-        events ( name, date, venue, city )
+        events ( name, date, venue, city, organizer_phone, location_link, terms_conditions )
       )
     `)
     .eq('scan_token', token)

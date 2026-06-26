@@ -54,6 +54,9 @@ const eventValidation = [
   body('description').optional().trim().isString(),
   body('status').optional().isIn(['draft', 'published', 'cancelled']),
   body('max_tickets_per_order').optional().isInt({ min: 1 }),
+  body('organizer_phone').optional().trim().isString(),
+  body('location_link').optional().trim().isString(),
+  body('terms_conditions').optional().trim().isString(),
 ];
 
 router.post('/', eventValidation, async (req: Request, res: Response) => {
@@ -63,7 +66,7 @@ router.post('/', eventValidation, async (req: Request, res: Response) => {
     return;
   }
 
-  const { name, date, time, venue, city, description, status, max_tickets_per_order } = req.body;
+  const { name, date, time, venue, city, description, status, max_tickets_per_order, organizer_phone } = req.body;
 
   const { data: event, error: insertErr } = await supabase
     .from('events')
@@ -76,6 +79,9 @@ router.post('/', eventValidation, async (req: Request, res: Response) => {
       description: description || null,
       status: status || 'draft',
       max_tickets_per_order: max_tickets_per_order ?? 10,
+      organizer_phone: organizer_phone || null,
+      location_link: req.body.location_link || null,
+      terms_conditions: req.body.terms_conditions || null,
     })
     .select()
     .single();
@@ -99,6 +105,9 @@ const updateEventValidation = [
   body('max_tickets_per_order').optional().isInt({ min: 1, max: 100 }),
   body('poster_url').optional().trim().isString(),
   body('banner_url').optional().trim().isString(),
+  body('organizer_phone').optional().trim().isString(),
+  body('location_link').optional().trim().isString(),
+  body('terms_conditions').optional().trim().isString(),
 ];
 
 router.put('/:event_id', updateEventValidation, async (req: Request, res: Response) => {
@@ -109,7 +118,7 @@ router.put('/:event_id', updateEventValidation, async (req: Request, res: Respon
   }
 
   const { event_id } = req.params;
-  const allowedFields = ['name', 'date', 'time', 'venue', 'city', 'description', 'status', 'max_tickets_per_order', 'poster_url', 'banner_url'];
+  const allowedFields = ['name', 'date', 'time', 'venue', 'city', 'description', 'status', 'max_tickets_per_order', 'poster_url', 'banner_url', 'organizer_phone', 'location_link', 'terms_conditions'];
   const updates: Record<string, unknown> = {};
 
   for (const field of allowedFields) {

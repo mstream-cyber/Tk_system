@@ -242,8 +242,8 @@ export default function BookingPage() {
   }, [booking]);
 
   const inputFields = [
-    { key: 'buyerName', label: 'Full Name', type: 'text', placeholder: 'e.g. Ahsan Ali' },
-    { key: 'buyerEmail', label: 'Email Address', type: 'email', placeholder: 'ahsan@example.com' },
+    { key: 'buyerName', label: 'Full Name', type: 'text', placeholder: 'e.g. John Doe' },
+    { key: 'buyerEmail', label: 'Email Address', type: 'email', placeholder: 'john@example.com' },
     { key: 'buyerPhone', label: 'WhatsApp Number', type: 'tel', placeholder: '03XX-XXXXXXX' },
     { key: 'buyerCity', label: 'City', type: 'text', placeholder: 'e.g. Karachi' },
   ] as const;
