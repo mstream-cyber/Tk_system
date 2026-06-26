@@ -1,5 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { LockIcon } from '../components/ui/Icons';
 
 export default function AdminLogin() {
   const [password, setPassword] = useState('');
@@ -33,40 +36,39 @@ export default function AdminLogin() {
   }, [password, navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-surface flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-white">Global Tickets</h1>
-          <p className="text-gray-400 text-sm mt-1">Admin Panel</p>
+          <div className="w-14 h-14 rounded-full bg-accent-subtle flex items-center justify-center mx-auto mb-4">
+            <LockIcon className="text-accent-light" size={24} />
+          </div>
+          <h1 className="text-2xl font-bold text-content">Global Tickets</h1>
+          <p className="text-content-muted text-sm mt-1">Admin Panel</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-700"
+          className="bg-card rounded-2xl p-6 shadow-xl border border-border"
         >
-          <label className="block text-sm font-semibold text-gray-300 mb-2">
-            Admin Password
-          </label>
-          <input
+          <Input
+            label="Admin Password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-lg border border-gray-600 bg-gray-700 text-white outline-none text-sm focus:border-purple-500"
             placeholder="Enter password"
             autoFocus
+            error={error || undefined}
+            touched={!!error}
           />
 
-          {error && (
-            <p className="text-red-400 text-xs mt-2">{error}</p>
-          )}
-
-          <button
+          <Button
             type="submit"
             disabled={loading || !password}
-            className="mt-4 w-full py-3 rounded-xl bg-purple-600 text-white font-bold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            loading={loading}
+            className="mt-4 w-full"
           >
             {loading ? 'Logging in...' : 'Login'}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

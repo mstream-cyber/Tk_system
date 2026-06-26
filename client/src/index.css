@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #181b21;
+@layer base {
+  :root {
+    --color-surface: #181b21;
+    --color-card: #232730;
+    --color-input: #2a2f36;
+    --color-border: #3a3f48;
+    --color-accent: #9333ea;
+  }
+
+  body {
+    background-color: var(--color-surface);
+  }
 }

@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
 
 interface TicketTypeFormTicketType {
   id: string;
@@ -126,96 +129,84 @@ export default function TicketTypeForm({ eventId, ticketType, onClose, onSaved, 
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg overflow-y-auto max-h-[90vh]">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">
+      <div className="bg-card rounded-2xl shadow-xl p-8 w-full max-w-lg overflow-y-auto max-h-[90vh] border border-border">
+        <h2 className="text-xl font-bold text-content mb-6">
           {isEdit ? 'Edit ticket type' : 'New ticket type'}
         </h2>
 
         {errors.form && (
-          <p className="text-red-500 text-sm mb-4">{errors.form}</p>
+          <p className="text-danger-light text-sm mb-4">{errors.form}</p>
         )}
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. General, VIP, Early Bird"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
-            />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-          </div>
+          <Input
+            label="Name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. General, VIP, Early Bird"
+            error={errors.name}
+            touched={!!errors.name}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
-            />
-          </div>
+          <Input
+            label="Description"
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Price (PKR)</label>
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              step={100}
-              min={0}
-              placeholder="e.g. 1500"
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
-            />
-            {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
-          </div>
+          <Input
+            label="Price (PKR)"
+            type="number"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            step={100}
+            min={0}
+            placeholder="e.g. 1500"
+            error={errors.price}
+            touched={!!errors.price}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sort order</label>
-            <input
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Sort order"
               type="number"
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
             />
-          </div>
 
-          {isEdit && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
+            {isEdit && (
+              <Select
+                label="Status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as 'active' | 'paused')}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
-              >
-                <option value="active">Active</option>
-                <option value="paused">Paused</option>
-              </select>
-            </div>
-          )}
+                options={[
+                  { value: 'active', label: 'Active' },
+                  { value: 'paused', label: 'Paused' },
+                ]}
+              />
+            )}
+          </div>
 
           {!isEdit && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Total quantity</label>
-              <input
-                type="number"
-                value={totalQuantity}
-                onChange={(e) => setTotalQuantity(e.target.value)}
-                min={1}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
-              />
-              {errors.totalQuantity && <p className="text-red-500 text-xs mt-1">{errors.totalQuantity}</p>}
-            </div>
+            <Input
+              label="Total quantity"
+              type="number"
+              value={totalQuantity}
+              onChange={(e) => setTotalQuantity(e.target.value)}
+              min={1}
+              error={errors.totalQuantity}
+              touched={!!errors.totalQuantity}
+            />
           )}
 
           {isEdit && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-content-secondary mb-1">
                 Quantity adjustment
               </label>
-              <p className="text-xs text-gray-500 mb-1">
+              <p className="text-xs text-content-muted mb-1">
                 Current: {ticketType.available_quantity} available of {ticketType.total_quantity} total
               </p>
               <input
@@ -223,27 +214,19 @@ export default function TicketTypeForm({ eventId, ticketType, onClose, onSaved, 
                 value={quantityAdjustment}
                 onChange={(e) => setQuantityAdjustment(e.target.value)}
                 placeholder="e.g. 50 or -10"
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-input text-content outline-none text-sm focus:border-accent placeholder-content-placeholder"
               />
             </div>
           )}
         </div>
 
         <div className="flex gap-3 mt-6">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="flex-1 py-2.5 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
+          <Button onClick={onClose} disabled={loading} variant="secondary" className="flex-1">
             Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="flex-1 py-2.5 rounded-xl bg-purple-600 text-white font-bold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50"
-          >
+          </Button>
+          <Button onClick={handleSubmit} disabled={loading} loading={loading} className="flex-1">
             {loading ? 'Saving...' : 'Save'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

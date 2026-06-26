@@ -11,6 +11,14 @@ export function formatDate(iso: string) {
   });
 }
 
+export function formatShortDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-PK', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 export function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-PK', {
     hour: '2-digit',

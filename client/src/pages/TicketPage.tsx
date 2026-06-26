@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { fetchTicket } from '../api';
 import TicketCard from '../components/TicketCard';
 import { downloadTicketPDF } from '../utils/downloadTicket';
+import { Button } from '../components/ui/Button';
+import { Spinner } from '../components/ui/Spinner';
 import type { TicketOrder } from '../types';
 import msLogo from '../assets/mslogo.png';
 
@@ -30,21 +32,21 @@ export default function TicketPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#181b21] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <Spinner />
       </div>
     );
   }
 
   if (notFound || !order) {
     return (
-      <div className="min-h-screen bg-[#181b21] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-surface flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-600 mb-2">404</h1>
-          <h2 className="text-xl font-bold text-white mb-2">Ticket not found</h2>
-          <p className="text-sm text-gray-400 mb-6">No ticket found with this reference number.</p>
-          <Link to="/" className="inline-block px-6 py-2.5 rounded-xl bg-purple-600 text-white font-semibold text-sm hover:bg-purple-700 transition-colors">
-            Go Home
+          <h1 className="text-4xl font-bold text-content-muted mb-2">404</h1>
+          <h2 className="text-xl font-bold text-content mb-2">Ticket not found</h2>
+          <p className="text-sm text-content-muted mb-6">No ticket found with this reference number.</p>
+          <Link to="/">
+            <Button>Go Home</Button>
           </Link>
         </div>
       </div>
@@ -58,14 +60,18 @@ export default function TicketPage() {
 
   const isApproved = order.payment_status === 'approved';
 
+  const LogoHeader = () => (
+    <div className="relative flex items-center justify-center mb-6 min-h-[40px]">
+      <img src={msLogo} alt="Logo" className="absolute left-0 h-10 w-auto" />
+      <h1 className="text-2xl font-bold text-content">Ticket Portal</h1>
+    </div>
+  );
+
   if (isApproved) {
     return (
-      <div className="min-h-screen bg-[#181b21] py-8 px-4">
+      <div className="min-h-screen bg-surface py-8 px-4">
         <div className="max-w-[480px] mx-auto">
-          <div className="relative flex items-center justify-center mb-6 min-h-[40px]">
-            <img src={msLogo} alt="Logo" className="absolute left-0 h-10 w-auto" />
-            <h1 className="text-2xl font-bold text-white">Ticket Portal</h1>
-          </div>
+          <LogoHeader />
           <TicketCard
             ticketId={order.ticket_id}
             scanToken={order.scan_token}
@@ -77,7 +83,7 @@ export default function TicketPage() {
             quantity={order.quantity}
             totalPaid={order.total_amount}
           />
-          <button
+          <Button
             onClick={() => downloadTicketPDF({
               ticketId: order.ticket_id,
               scanToken: order.scan_token,
@@ -89,15 +95,15 @@ export default function TicketPage() {
               quantity: order.quantity,
               totalPaid: order.total_amount,
             })}
-            className="mt-4 w-full py-3 rounded-xl bg-purple-600 text-white font-bold text-sm hover:bg-purple-700 transition-colors"
+            className="mt-4 w-full"
+            size="lg"
           >
             Download PDF
-          </button>
-          <Link
-            to="/"
-            className="block mt-3 w-full py-3 rounded-xl border-2 border-[#3a3f48] text-gray-300 font-semibold text-sm text-center hover:bg-[#2a2f36] transition-colors"
-          >
-            Book Another Ticket
+          </Button>
+          <Link to="/" className="block mt-3">
+            <Button variant="secondary" className="w-full">
+              Book Another Ticket
+            </Button>
           </Link>
         </div>
       </div>
@@ -105,31 +111,25 @@ export default function TicketPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#181b21] py-8 px-4">
+    <div className="min-h-screen bg-surface py-8 px-4">
       <div className="max-w-[480px] mx-auto text-center">
-        <div className="relative flex items-center justify-center mb-6 min-h-[40px]">
-          <img src={msLogo} alt="Logo" className="absolute left-0 h-10 w-auto" />
-          <h1 className="text-2xl font-bold text-white">Ticket Portal</h1>
-        </div>
-        <div className="w-20 h-20 rounded-full bg-amber-500 flex items-center justify-center mx-auto mb-4">
-          <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        <LogoHeader />
+        <div className="w-20 h-20 rounded-full bg-warning flex items-center justify-center mx-auto mb-4">
+          <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">
+        <h2 className="text-2xl font-bold text-content mb-2">
           Waiting for confirmation
         </h2>
-        <p className="text-sm text-gray-400 mb-2">
-          Your booking <strong className="text-gray-200">{order.ticket_id}</strong> is still under review.
+        <p className="text-sm text-content-muted mb-2">
+          Your booking <strong className="text-content-secondary">{order.ticket_id}</strong> is still under review.
         </p>
-        <p className="text-sm text-gray-500 mb-6">
-          You will receive an email at <strong className="text-gray-300">{order.buyer_email}</strong> once your payment is verified.
+        <p className="text-sm text-content-placeholder mb-6">
+          You will receive an email at <strong className="text-content-secondary">{order.buyer_email}</strong> once your payment is verified.
         </p>
-        <Link
-          to="/"
-          className="inline-block px-6 py-2.5 rounded-xl bg-purple-600 text-white font-semibold text-sm hover:bg-purple-700 transition-colors"
-        >
-          Go Home
+        <Link to="/">
+          <Button>Go Home</Button>
         </Link>
       </div>
     </div>

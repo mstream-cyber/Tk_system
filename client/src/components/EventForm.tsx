@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
 
 interface EventFormEvent {
   id: string;
@@ -149,114 +152,103 @@ export default function EventForm({ event, onClose, onSaved, apiFetch }: EventFo
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg overflow-y-auto max-h-[90vh]">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">
+      <div className="bg-card rounded-2xl shadow-xl p-8 w-full max-w-lg overflow-y-auto max-h-[90vh] border border-border">
+        <h2 className="text-xl font-bold text-content mb-6">
           {isEdit ? 'Edit event' : 'New event'}
         </h2>
 
         {errors.form && (
-          <p className="text-red-500 text-sm mb-4">{errors.form}</p>
+          <p className="text-danger-light text-sm mb-4">{errors.form}</p>
         )}
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Event name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
-            />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-          </div>
+          <Input
+            label="Event name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            error={errors.name}
+            touched={!!errors.name}
+          />
 
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-              <input
+              <Input
+                label="Date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
+                error={errors.date}
+                touched={!!errors.date}
               />
-              {errors.date && <p className="text-red-500 text-xs mt-1">{errors.date}</p>}
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-              <input
+              <Input
+                label="Time"
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
+                error={errors.time}
+                touched={!!errors.time}
               />
-              {errors.time && <p className="text-red-500 text-xs mt-1">{errors.time}</p>}
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Venue</label>
-            <input
-              type="text"
-              value={venue}
-              onChange={(e) => setVenue(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
-            />
-            {errors.venue && <p className="text-red-500 text-xs mt-1">{errors.venue}</p>}
-          </div>
+          <Input
+            label="Venue"
+            type="text"
+            value={venue}
+            onChange={(e) => setVenue(e.target.value)}
+            error={errors.venue}
+            touched={!!errors.venue}
+          />
+
+          <Input
+            label="City"
+            type="text"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            error={errors.city}
+            touched={!!errors.city}
+          />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-            <input
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
-            />
-            {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-content-secondary mb-1">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500 resize-none"
+              className="w-full px-3 py-2 rounded-lg border border-border bg-input text-content outline-none text-sm focus:border-accent resize-none placeholder-content-placeholder"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Max tickets per order</label>
-            <input
-              type="number"
-              value={maxTicketsPerOrder}
-              onChange={(e) => setMaxTicketsPerOrder(Math.max(1, parseInt(e.target.value) || 1))}
-              min={1}
-              max={20}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
-            />
-          </div>
+          <Input
+            label="Max tickets per order"
+            type="number"
+            value={String(maxTicketsPerOrder)}
+            onChange={(e) => setMaxTicketsPerOrder(Math.max(1, parseInt(e.target.value) || 1))}
+            min={1}
+            max={20}
+          />
+
+          <Select
+            label="Status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as 'draft' | 'published' | 'cancelled')}
+            options={[
+              { value: 'draft', label: 'Draft' },
+              { value: 'published', label: 'Published' },
+              { value: 'cancelled', label: 'Cancelled' },
+            ]}
+          />
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as 'draft' | 'published' | 'cancelled')}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 outline-none text-sm focus:border-purple-500"
-            >
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Banner image</label>
+            <label className="block text-sm font-medium text-content-secondary mb-1">Banner image</label>
             <input
               type="file"
               accept="image/jpeg,image/png"
               onChange={handleBannerChange}
-              className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              className="w-full text-sm text-content-muted file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-subtle file:text-accent-light hover:file:bg-accent-subtle/60"
             />
             {bannerPreview && (
               <img
@@ -269,20 +261,12 @@ export default function EventForm({ event, onClose, onSaved, apiFetch }: EventFo
         </div>
 
         <div className="flex gap-3 mt-6">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="flex-1 py-2.5 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
+          <Button onClick={onClose} disabled={loading} variant="secondary" className="flex-1">
             Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="flex-1 py-2.5 rounded-xl bg-purple-600 text-white font-bold text-sm hover:bg-purple-700 transition-colors disabled:opacity-50"
-          >
+          </Button>
+          <Button onClick={handleSubmit} disabled={loading} loading={loading} className="flex-1">
             {loading ? 'Saving...' : 'Save'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

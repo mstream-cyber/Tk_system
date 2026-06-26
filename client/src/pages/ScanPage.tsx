@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { LockIcon, CheckIcon, CloseIcon } from '../components/ui/Icons';
 import msLogo from '../assets/mslogo.png';
 
 type ScanState = 'pin' | 'scanning' | 'loading' | 'valid' | 'already_used' | 'invalid' | 'reset_success';
@@ -19,9 +22,9 @@ const TOKEN_KEY = 'scan_token';
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between items-center py-2 border-b border-[#3a3f48] last:border-0">
-      <span className="text-[#a0a0be] text-xs font-semibold uppercase tracking-wide">{label}</span>
-      <span className="text-white text-sm font-medium text-right max-w-[60%] truncate">{value}</span>
+    <div className="flex justify-between items-center py-2 border-b border-border last:border-0">
+      <span className="text-content-muted text-xs font-semibold uppercase tracking-wide">{label}</span>
+      <span className="text-content text-sm font-medium text-right max-w-[60%] truncate">{value}</span>
     </div>
   );
 }
@@ -208,18 +211,6 @@ export default function ScanPage() {
     }
   }, [scannerToken, resetPassword]);
 
-  const openResetModal = useCallback(() => {
-    setResetPassword('');
-    setResetError('');
-    setShowResetModal(true);
-  }, []);
-
-  const closeResetModal = useCallback(() => {
-    setShowResetModal(false);
-    setResetPassword('');
-    setResetError('');
-  }, []);
-
   const formatTimestamp = (iso: string, withTime = true) => {
     const d = new Date(iso);
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -234,30 +225,28 @@ export default function ScanPage() {
 
   if (state === 'pin') {
     return (
-      <div className="min-h-screen bg-[#181b21] flex items-center justify-center px-4">
-        <form onSubmit={handlePinSubmit} className="bg-[#232730] rounded-2xl shadow-xl border border-[#3a3f48] p-8 w-full max-w-sm">
+      <div className="min-h-screen bg-surface flex items-center justify-center px-4">
+        <form onSubmit={handlePinSubmit} className="bg-card rounded-2xl shadow-xl border border-border p-8 w-full max-w-sm">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-full bg-purple-900/40 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
-              </svg>
+            <div className="w-16 h-16 rounded-full bg-accent-subtle flex items-center justify-center mx-auto mb-4">
+              <LockIcon className="text-accent-light" size={28} />
             </div>
-            <h1 className="text-xl font-bold text-white">Staff Login</h1>
-            <p className="text-sm text-gray-400 mt-1">Enter PIN to access scanner</p>
+            <h1 className="text-xl font-bold text-content">Staff Login</h1>
+            <p className="text-sm text-content-muted mt-1">Enter PIN to access scanner</p>
           </div>
-          <input
+          <Input
             type="password"
             value={pin}
             onChange={(e) => { setPin(e.target.value); setPinError(''); }}
             placeholder="Enter PIN"
+            error={pinError}
+            touched={!!pinError}
+            className="text-center text-lg tracking-widest font-bold"
             maxLength={10}
-            className="w-full px-4 py-3 rounded-xl border border-[#3a3f48] bg-[#2a2f36] text-white placeholder-gray-500 outline-none text-center text-lg tracking-widest font-bold focus:border-purple-500"
-            autoFocus
           />
-          {pinError && <p className="text-red-400 text-sm text-center mt-2">{pinError}</p>}
-          <button type="submit" disabled={!pin.trim()} className="w-full mt-5 py-3 rounded-xl bg-purple-600 text-white font-bold text-base hover:bg-purple-700 disabled:opacity-50 transition-colors">
+          <Button type="submit" disabled={!pin.trim()} className="w-full mt-5" size="lg">
             Unlock Scanner
-          </button>
+          </Button>
         </form>
       </div>
     );
@@ -265,10 +254,10 @@ export default function ScanPage() {
 
   if (state === 'loading') {
     return (
-      <div className="min-h-screen bg-[#181b21] flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-300 text-base">Verifying ticket...</p>
+          <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-content-secondary text-base">Verifying ticket...</p>
         </div>
       </div>
     );
@@ -276,17 +265,15 @@ export default function ScanPage() {
 
   if (state === 'valid') {
     return (
-      <div className="min-h-screen bg-[#181b21] flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-sm bg-[#232730] rounded-2xl border border-[#3a3f48] overflow-hidden">
-          <div className="bg-green-600 px-6 py-5 text-center">
-            <svg className="w-12 h-12 text-white mx-auto mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-sm bg-card rounded-2xl border border-border overflow-hidden">
+          <div className="bg-success px-6 py-5 text-center">
+            <CheckIcon className="text-white mx-auto mb-1" size={40} />
             <h1 className="text-white font-bold text-3xl tracking-wider">VALID</h1>
           </div>
           <div className="p-5">
             {result.eventName && (
-              <p className="text-purple-400 text-sm font-semibold text-center mb-4">{result.eventName}</p>
+              <p className="text-accent-light text-sm font-semibold text-center mb-4">{result.eventName}</p>
             )}
             <div className="space-y-0">
               <DetailRow label="Buyer" value={result.buyerName || ''} />
@@ -298,72 +285,71 @@ export default function ScanPage() {
             </div>
           </div>
         </div>
-        <button onClick={resetToScanning} className="mt-6 px-8 py-3 rounded-xl bg-purple-600 text-white font-bold text-base hover:bg-purple-700 transition-colors">
+        <Button onClick={resetToScanning} className="mt-6" size="lg">
           Scan Next Ticket
-        </button>
+        </Button>
       </div>
     );
   }
 
   if (state === 'already_used') {
     return (
-      <div className="min-h-screen bg-[#181b21] flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-sm bg-[#232730] rounded-2xl border border-[#3a3f48] overflow-hidden">
-          <div className="bg-red-600 px-6 py-5 text-center">
-            <svg className="w-12 h-12 text-white mx-auto mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+      <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-sm bg-card rounded-2xl border border-border overflow-hidden">
+          <div className="bg-danger px-6 py-5 text-center">
+            <CloseIcon className="text-white mx-auto mb-1" size={40} />
             <h1 className="text-white font-bold text-2xl tracking-wider">ALREADY SCANNED</h1>
           </div>
           <div className="p-5">
             {result.scannedAt && <DetailRow label="Scanned At" value={formatTimestamp(result.scannedAt)} />}
           </div>
         </div>
-        <button onClick={resetToScanning} className="mt-5 px-8 py-3 rounded-xl bg-purple-600 text-white font-bold text-base hover:bg-purple-700 transition-colors">
+        <Button onClick={resetToScanning} className="mt-5" size="lg">
           Scan Next Ticket
-        </button>
+        </Button>
         <button
-          onClick={openResetModal}
-          className="mt-3 text-sm text-gray-400 hover:text-purple-400 transition-colors underline underline-offset-2"
+          onClick={() => { setResetPassword(''); setResetError(''); setShowResetModal(true); }}
+          className="mt-3 text-sm text-content-muted hover:text-accent-light transition-colors underline underline-offset-2"
         >
           Reset scan
         </button>
 
         {showResetModal && (
-          <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4">
-            <div
-              className="bg-[#232730] rounded-2xl border border-[#3a3f48] p-6 w-full max-w-sm"
+          <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4"
+            onClick={(e) => { if (e.target === e.currentTarget) { setShowResetModal(false); setResetPassword(''); setResetError(''); } }}
+          >
+            <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-sm"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-white text-lg font-bold mb-2">Reset Scan</h2>
-              <p className="text-gray-400 text-sm mb-4">
+              <h2 className="text-content text-lg font-bold mb-2">Reset Scan</h2>
+              <p className="text-content-muted text-sm mb-4">
                 This will make the ticket scannable again. Enter the reset password to confirm.
               </p>
-              <input
+              <Input
                 type="password"
                 value={resetPassword}
                 onChange={(e) => { setResetPassword(e.target.value); setResetError(''); }}
                 placeholder="Reset password"
-                className="w-full px-4 py-3 rounded-xl border border-[#3a3f48] bg-[#2a2f36] text-white placeholder-gray-500 outline-none text-base focus:border-purple-500"
-                autoFocus
+                error={resetError}
+                touched={!!resetError}
               />
-              {resetError && <p className="text-red-400 text-sm mt-2">{resetError}</p>}
               <div className="flex gap-3 mt-5">
-                <button
-                  onClick={closeResetModal}
-                  className="flex-1 py-3 rounded-xl border border-[#3a3f48] text-gray-300 font-bold text-base hover:bg-[#2a2f36] transition-colors"
+                <Button
+                  onClick={() => { setShowResetModal(false); setResetPassword(''); setResetError(''); }}
+                  variant="secondary"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={handleResetSubmit}
                   disabled={resetLoading || !resetPassword.trim()}
-                  className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-base hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  variant="danger"
+                  loading={resetLoading}
+                  className="flex-1"
                 >
-                  {resetLoading ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : 'Confirm'}
-                </button>
+                  Confirm
+                </Button>
               </div>
             </div>
           </div>
@@ -374,55 +360,51 @@ export default function ScanPage() {
 
   if (state === 'reset_success') {
     return (
-      <div className="min-h-screen bg-[#181b21] flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-sm bg-[#232730] rounded-2xl border border-[#3a3f48] overflow-hidden">
-          <div className="bg-green-600 px-6 py-5 text-center">
-            <svg className="w-12 h-12 text-white mx-auto mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-sm bg-card rounded-2xl border border-border overflow-hidden">
+          <div className="bg-success px-6 py-5 text-center">
+            <CheckIcon className="text-white mx-auto mb-1" size={40} />
             <h1 className="text-white font-bold text-3xl tracking-wider">SCAN RESET</h1>
           </div>
           <div className="p-5 text-center">
-            <p className="text-gray-300 text-sm">Ticket can now be scanned again.</p>
+            <p className="text-content-secondary text-sm">Ticket can now be scanned again.</p>
           </div>
         </div>
-        <button onClick={resetToScanning} className="mt-6 px-8 py-3 rounded-xl bg-purple-600 text-white font-bold text-base hover:bg-purple-700 transition-colors">
+        <Button onClick={resetToScanning} className="mt-6" size="lg">
           Scan Next Ticket
-        </button>
+        </Button>
       </div>
     );
   }
 
   if (state === 'invalid') {
     return (
-      <div className="min-h-screen bg-[#181b21] flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-sm bg-[#232730] rounded-2xl border border-[#3a3f48] overflow-hidden">
-          <div className="bg-red-600 px-6 py-5 text-center">
-            <svg className="w-12 h-12 text-white mx-auto mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+      <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-6">
+        <div className="w-full max-w-sm bg-card rounded-2xl border border-border overflow-hidden">
+          <div className="bg-danger px-6 py-5 text-center">
+            <CloseIcon className="text-white mx-auto mb-1" size={40} />
             <h1 className="text-white font-bold text-3xl tracking-wider">INVALID TICKET</h1>
           </div>
           <div className="p-5">
-            <p className="text-gray-300 text-sm text-center">{result.errorMessage || 'Ticket could not be verified'}</p>
+            <p className="text-content-secondary text-sm text-center">{result.errorMessage || 'Ticket could not be verified'}</p>
           </div>
         </div>
-        <button onClick={resetToScanning} className="mt-6 px-8 py-3 rounded-xl bg-purple-600 text-white font-bold text-base hover:bg-purple-700 transition-colors">
+        <Button onClick={resetToScanning} className="mt-6" size="lg">
           Scan Next Ticket
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#181b21] flex flex-col items-center px-4 py-8">
+    <div className="min-h-screen bg-surface flex flex-col items-center px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="relative flex items-center justify-center mb-6 min-h-[40px]">
           <img src={msLogo} alt="Logo" className="absolute left-0 h-10 w-auto" />
-          <h1 className="text-xl font-bold text-white">Ticket Scanner</h1>
+          <h1 className="text-xl font-bold text-content">Ticket Scanner</h1>
         </div>
-        <p className="text-gray-400 text-sm text-center mb-6">Point camera at ticket QR code</p>
-        <div id="qr-reader" className="rounded-xl overflow-hidden [&_video]:rounded-xl [&_video]:border [&_video]:border-[#3a3f48]" />
+        <p className="text-content-muted text-sm text-center mb-6">Point camera at ticket QR code</p>
+        <div id="qr-reader" className="rounded-xl overflow-hidden [&_video]:rounded-xl [&_video]:border [&_video]:border-border" />
       </div>
     </div>
   );
