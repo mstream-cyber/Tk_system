@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
 import { requireRole, generateToken } from '../middleware/auth';
+import type { AuthRequest } from '../middleware/auth';
 import { MS } from '../lib/constants';
 import { sendTicketEmail, sendRejectionEmail } from '../services/email';
 import { generateTicketId } from '../utils/ticketId';
@@ -78,7 +79,7 @@ router.get('/orders/:order_id/receipt', async (req: Request, res: Response) => {
   res.json(success({ url: signedUrl.signedUrl }));
 });
 
-router.post('/orders/:order_id/approve', async (req: Request, res: Response) => {
+router.post('/orders/:order_id/approve', async (req: AuthRequest, res: Response) => {
   const { order_id } = req.params;
   const { data: order, error: fetchErr } = await supabase
     .from('orders')
@@ -86,7 +87,7 @@ router.post('/orders/:order_id/approve', async (req: Request, res: Response) => 
     .eq('id', order_id).single();
   if (fetchErr || !order) { res.status(404).json(error('Order not found')); return; }
   if (order.payment_status !== 'receipt_uploaded') { res.status(400).json(error('Order must be in receipt_uploaded status')); return; }
-  const { error: updateErr } = await supabase.from('orders').update({ payment_status: 'approved', approved_at: new Date().toISOString(), approved_by: 'admin' }).eq('id', order_id);
+  const { error: updateErr } = await supabase.from('orders').update({ payment_status: 'approved', approved_at: new Date().toISOString(), approved_by: req.admin?.role || 'admin' }).eq('id', order_id);
   if (updateErr) { res.status(500).json(error('Failed to approve order')); return; }
   const emailOrder: Order = { id: order.id, ticket_id: order.ticket_id, scan_token: order.scan_token, buyer_name: order.buyer_name, buyer_email: order.buyer_email, quantity: order.quantity, total_amount: order.total_amount, payment_method: order.payment_method, ticket_types: order.ticket_types };
   sendTicketEmail(emailOrder).catch((err) => console.error(`Failed to send ticket email for order ${order_id}:`, err));
@@ -125,16 +126,23 @@ router.post('/verify-scan-pin', async (req: Request, res: Response) => {
     return;
   }
   const token = generateToken('scanner');
+  res.cookie('scanner_token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: MS.FIFTEEN_MINUTES,
+    path: '/',
+  });
   res.json(success({ token }));
 });
 
 router.post('/gate-sales',
   body('ticket_type_id').isUUID().withMessage('Valid ticket type ID is required'),
   body('quantity').isInt({ min: 1, max: 10 }).withMessage('Quantity must be 1-10'),
-  body('buyer_name').trim().notEmpty().withMessage('Buyer name is required'),
+  body('buyer_name').trim().isLength({ min: 1, max: 200 }).withMessage('Buyer name is required (max 200 chars)'),
   body('buyer_email').isEmail().withMessage('Valid email is required'),
-  body('buyer_phone').trim().notEmpty().withMessage('Phone is required'),
-  async (req: Request, res: Response) => {
+  body('buyer_phone').trim().isLength({ min: 1, max: 20 }).withMessage('Phone is required (max 20 chars)'),
+  async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       res.status(400).json(error(errors.array().map((e) => e.msg).join('; ')));
@@ -182,7 +190,7 @@ router.post('/gate-sales',
         payment_method: 'cash',
         payment_status: 'approved',
         approved_at: now,
-        approved_by: 'admin',
+        approved_by: req.admin?.role || 'admin',
         ticket_id,
         scan_token,
       })
@@ -190,7 +198,7 @@ router.post('/gate-sales',
       .single();
 
     if (insertErr) {
-      console.error('Failed to create gate sale order:', insertErr);
+      console.error('Failed to create gate sale order:', insertErr.message || 'Unknown error');
       res.status(500).json(error('Failed to create order'));
       return;
     }
@@ -203,7 +211,7 @@ router.post('/gate-sales',
 
     if (decErr) {
       await supabase.from('orders').delete().eq('id', order.id);
-      console.error('Failed to decrement inventory:', decErr);
+      console.error('Failed to decrement inventory:', decErr.message || 'Unknown error');
       res.status(409).json(error('Inventory conflict, please retry'));
       return;
     }

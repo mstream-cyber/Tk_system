@@ -1,13 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
 import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
-import { authMiddleware } from '../middleware/auth';
-import { FILE } from '../lib/constants';
+import { requireRole } from '../middleware/auth';
+import { FILE, MS } from '../lib/constants';
 
 const router = Router();
-router.use(authMiddleware);
+router.use(requireRole('admin'));
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -87,7 +88,26 @@ router.post('/', eventValidation, async (req: Request, res: Response) => {
   res.status(201).json(success(event));
 });
 
-router.put('/:event_id', async (req: Request, res: Response) => {
+const updateEventValidation = [
+  body('name').optional().trim().isLength({ min: 1, max: 200 }),
+  body('date').optional().trim().notEmpty(),
+  body('time').optional().trim().notEmpty(),
+  body('venue').optional().trim().isLength({ min: 1, max: 200 }),
+  body('city').optional().trim().isLength({ min: 1, max: 100 }),
+  body('description').optional().trim().isString(),
+  body('status').optional().isIn(['draft', 'published', 'cancelled']),
+  body('max_tickets_per_order').optional().isInt({ min: 1, max: 100 }),
+  body('poster_url').optional().trim().isString(),
+  body('banner_url').optional().trim().isString(),
+];
+
+router.put('/:event_id', updateEventValidation, async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json(error(errors.array().map((e) => e.msg).join('; ')));
+    return;
+  }
+
   const { event_id } = req.params;
   const allowedFields = ['name', 'date', 'time', 'venue', 'city', 'description', 'status', 'max_tickets_per_order', 'poster_url', 'banner_url'];
   const updates: Record<string, unknown> = {};
@@ -195,7 +215,13 @@ router.patch('/:event_id/status', statusValidation, async (req: Request, res: Re
 
 // ── Banner upload ──
 
-router.post('/:event_id/banner', upload.single('banner_image'), async (req: Request, res: Response) => {
+const bannerUploadLimiter = rateLimit({
+  windowMs: MS.FIFTEEN_MINUTES,
+  max: 10,
+  message: { success: false, error: 'Too many upload attempts' }
+});
+
+router.post('/:event_id/banner', bannerUploadLimiter, upload.single('banner_image'), async (req: Request, res: Response) => {
   try {
     const { event_id } = req.params;
     const file = req.file;
@@ -218,11 +244,10 @@ router.post('/:event_id/banner', upload.single('banner_image'), async (req: Requ
       .from('event-banners')
       .upload(storagePath, file.buffer, {
         contentType: detectedMime,
-        upsert: true,
       });
 
     if (uploadErr) {
-      console.error('Banner upload failed:', uploadErr);
+      console.error('Banner upload failed:', uploadErr.message || 'Unknown error');
       res.status(500).json(error('Failed to upload banner'));
       return;
     }
@@ -236,7 +261,7 @@ router.post('/:event_id/banner', upload.single('banner_image'), async (req: Requ
       .eq('id', event_id);
 
     if (updateErr) {
-      console.error('Failed to update banner_url:', updateErr);
+      console.error('Failed to update banner_url:', updateErr.message || 'Unknown error');
       await supabase.storage.from('event-banners').remove([storagePath]);
       res.status(500).json(error('Failed to update event with banner URL'));
       return;
@@ -296,7 +321,21 @@ router.post('/:event_id/ticket-types', ticketTypeValidation, async (req: Request
   res.status(201).json(success(ticketType));
 });
 
-router.put('/:event_id/ticket-types/:type_id', async (req: Request, res: Response) => {
+const updateTicketTypeValidation = [
+  body('name').optional().trim().isLength({ min: 1, max: 100 }),
+  body('price').optional().isInt({ min: 1 }),
+  body('description').optional().trim().isString(),
+  body('sort_order').optional().isInt(),
+  body('status').optional().isIn(['active', 'inactive']),
+];
+
+router.put('/:event_id/ticket-types/:type_id', updateTicketTypeValidation, async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json(error(errors.array().map((e) => e.msg).join('; ')));
+    return;
+  }
+
   const { type_id } = req.params;
   const allowedFields = ['name', 'price', 'description', 'sort_order', 'status'];
   const updates: Record<string, unknown> = {};

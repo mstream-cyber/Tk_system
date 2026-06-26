@@ -116,10 +116,8 @@ export default function EventForm({ event, onClose, onSaved, apiFetch }: EventFo
         const formData = new FormData();
         formData.append('banner_image', bannerFile);
 
-        const token = localStorage.getItem('admin_token');
         const bannerRes = await fetch(`/api/admin/events/${targetId}/banner`, {
           method: 'POST',
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: formData,
         });
         const bannerData = await bannerRes.json();

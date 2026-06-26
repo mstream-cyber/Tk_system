@@ -15,7 +15,7 @@ function getJwtSecret(): string {
 }
 
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
-  const token = req.cookies?.admin_token || (() => {
+  const token = req.cookies?.admin_token || req.cookies?.scanner_token || (() => {
     const header = req.headers.authorization;
     if (!header || !header.startsWith('Bearer ')) return null;
     return header.split(' ')[1];

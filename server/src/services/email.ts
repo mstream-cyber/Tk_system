@@ -45,6 +45,15 @@ function getTransporter() {
   return transporter;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export async function generateQRCode(content: string): Promise<string> {
   return QRCode.toDataURL(content, {
     width: 300,
@@ -177,13 +186,13 @@ export async function generateTicketPDF(order: Order, qrBase64: string): Promise
 
 function buildApprovalHtml(order: Order, qrBase64: string): string {
   const event = order.ticket_types?.events;
-  const eventName = event?.name || 'Event';
-  const dateStr = event?.date ? formatDate(event.date) : '—';
-  const timeStr = event?.date ? formatTime(event.date) : '';
-  const venue = event?.venue || '—';
-  const city = event?.city || '';
-  const ticketType = order.ticket_types?.name || 'Ticket';
-  const ticketUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/ticket/${order.ticket_id}`;
+  const eventName = escapeHtml(event?.name || 'Event');
+  const dateStr = escapeHtml(event?.date ? formatDate(event.date) : '—');
+  const timeStr = escapeHtml(event?.date ? formatTime(event.date) : '');
+  const venue = escapeHtml(event?.venue || '—');
+  const city = escapeHtml(event?.city || '');
+  const ticketType = escapeHtml(order.ticket_types?.name || 'Ticket');
+  const ticketUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/ticket/${escapeHtml(order.ticket_id)}`;
 
   return `
 <!DOCTYPE html>
@@ -196,7 +205,7 @@ function buildApprovalHtml(order: Order, qrBase64: string): string {
   <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">${eventName}</p>
 </td></tr>
 <tr><td style="padding:24px;">
-  <p style="margin:0 0 16px;font-size:15px;color:#333;">Hi <strong>${order.buyer_name}</strong>,</p>
+  <p style="margin:0 0 16px;font-size:15px;color:#333;">Hi <strong>${escapeHtml(order.buyer_name)}</strong>,</p>
   <p style="margin:0 0 20px;font-size:14px;color:#555;">Your payment has been verified and your ticket is ready. Details below:</p>
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f8fc;border-radius:8px;padding:16px;">
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;width:110px;">Event</td><td style="padding:6px 12px;font-size:14px;color:#222;font-weight:bold;">${eventName}</td></tr>
@@ -229,13 +238,13 @@ function buildRejectionHtml(order: Order, reason: string): string {
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:20px auto;background:#ffffff;border-radius:12px;overflow:hidden;">
 <tr><td style="background:#dc2626;padding:28px 24px;text-align:center;">
   <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;">Payment Not Verified</h1>
-  <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">Booking: ${order.ticket_id}</p>
+  <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">Booking: ${escapeHtml(order.ticket_id)}</p>
 </td></tr>
 <tr><td style="padding:24px;">
-  <p style="margin:0 0 16px;font-size:15px;color:#333;">Hi <strong>${order.buyer_name}</strong>,</p>
+  <p style="margin:0 0 16px;font-size:15px;color:#333;">Hi <strong>${escapeHtml(order.buyer_name)}</strong>,</p>
   <p style="margin:0 0 12px;font-size:14px;color:#555;">Unfortunately we could not verify your payment receipt for the following reason:</p>
   <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:20px;">
-    <p style="margin:0;font-size:14px;color:#991b1b;font-style:italic;">${reason}</p>
+    <p style="margin:0;font-size:14px;color:#991b1b;font-style:italic;">${escapeHtml(reason)}</p>
   </div>
   <p style="margin:0 0 20px;font-size:14px;color:#555;">Please contact us for assistance.</p>
   <div style="text-align:center;margin:24px 0 12px;">
@@ -294,7 +303,7 @@ export async function sendRejectionEmail(order: Order, reason: string) {
   const transport = getTransporter();
   const subject = `Action needed — payment not verified ${order.ticket_id}`;
   const htmlBody = buildRejectionHtml(order, reason);
-  const textBody = `Unfortunately we could not verify your payment receipt.\nReason: ${reason}\nPlease contact us at ${process.env.CONTACT_WHATSAPP || '+92 300 0000000'}.`;
+  const textBody = `Unfortunately we could not verify your payment receipt.\nReason: ${reason.replace(/[\n\r]/g, ' ')}\nPlease contact us at ${process.env.CONTACT_WHATSAPP || '+92 300 0000000'}.`;
 
   if (transport) {
     try {

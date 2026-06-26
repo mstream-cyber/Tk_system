@@ -18,8 +18,6 @@ type ResultData = {
   errorMessage?: string;
 };
 
-const TOKEN_KEY = 'scan_token';
-
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-center py-2 border-b border-border last:border-0">
@@ -48,18 +46,12 @@ export default function ScanPage() {
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get('token');
     if (urlToken) {
-      sessionStorage.setItem(TOKEN_KEY, urlToken);
       setScannerToken(urlToken);
       window.history.replaceState({}, '', '/scan');
       setState('scanning');
       return;
     }
-    const savedToken = sessionStorage.getItem(TOKEN_KEY);
-    if (savedToken) {
-      setScannerToken(savedToken);
-      setState('scanning');
-      return;
-    }
+    setState('pin');
   }, []);
 
   const stopScanner = useCallback(() => {
@@ -90,7 +82,6 @@ export default function ScanPage() {
       });
       const data = await res.json();
       if (data.success && data.data?.token) {
-        sessionStorage.setItem(TOKEN_KEY, data.data.token);
         setScannerToken(data.data.token);
         setState('scanning');
       } else {

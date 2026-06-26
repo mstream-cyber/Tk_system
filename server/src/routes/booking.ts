@@ -9,10 +9,10 @@ const router = Router();
 
 const validate = [
   body('ticket_type_id').isUUID().withMessage('ticket_type_id must be a valid UUID'),
-  body('buyer_name').trim().notEmpty().withMessage('buyer_name is required'),
+  body('buyer_name').trim().isLength({ min: 1, max: 200 }).withMessage('buyer_name is required (max 200 chars)'),
   body('buyer_email').isEmail().withMessage('buyer_email must be a valid email'),
-  body('buyer_phone').trim().notEmpty().withMessage('buyer_phone is required'),
-  body('buyer_city').optional().trim().isString(),
+  body('buyer_phone').trim().isLength({ min: 1, max: 20 }).withMessage('buyer_phone is required (max 20 chars)'),
+  body('buyer_city').optional().trim().isLength({ max: 100 }).withMessage('buyer_city too long'),
   body('quantity').isInt({ min: 1, max: 10 }).withMessage('quantity must be between 1 and 10'),
   body('payment_method')
     .isIn(['bank_transfer', 'easypaisa'])
@@ -66,7 +66,7 @@ router.post('/', validate, async (req: Request, res: Response) => {
     .single();
 
   if (insertErr || !order) {
-    console.error('Failed to insert order:', insertErr);
+    console.error('Failed to insert order:', insertErr?.message || 'Unknown error');
     res.status(500).json(error('Failed to create order'));
     return;
   }

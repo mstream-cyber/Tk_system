@@ -76,12 +76,11 @@ router.post(
       const { error: uploadErr } = await supabase.storage
         .from('payment-receipts')
         .upload(storagePath, file.buffer, {
-          contentType: detectedMime,
-          upsert: true,
-        });
+        contentType: detectedMime,
+      });
 
       if (uploadErr) {
-        console.error('Storage upload failed:', uploadErr);
+        console.error('Storage upload failed:', uploadErr.message || 'Unknown error');
         res.status(500).json(error('Receipt upload failed. Please try again.'));
         return;
       }
@@ -96,7 +95,7 @@ router.post(
         .eq('id', order_id);
 
       if (updateErr) {
-        console.error('Failed to update order:', updateErr);
+        console.error('Failed to update order:', updateErr.message || 'Unknown error');
         await supabase.storage.from('payment-receipts').remove([storagePath]);
         res.status(500).json(error('Receipt upload failed. Please try again.'));
         return;
