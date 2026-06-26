@@ -9,8 +9,10 @@ for (const key of REQUIRED_ENV) {
 }
 
 const pwd = process.env.ADMIN_PASSWORD!;
-if (pwd.length < 8 || /^(admin|password|12345)/i.test(pwd)) {
-  console.warn('WARNING: ADMIN_PASSWORD is weak. Use a strong password (8+ chars, mixed case, numbers).');
+const weakPassword = pwd.length < 8 || /^(admin|password|12345)/i.test(pwd) || !/[A-Z]/.test(pwd) || !/[a-z]/.test(pwd) || !/[0-9]/.test(pwd);
+if (weakPassword) {
+  console.error('FATAL: ADMIN_PASSWORD is too weak. Use 8+ chars with mixed case, numbers, and avoid common patterns.');
+  process.exit(1);
 }
 
 if (!process.env.SCAN_RESET_PASSWORD) {

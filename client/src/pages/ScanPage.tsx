@@ -43,11 +43,13 @@ export default function ScanPage() {
   const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('token');
-    if (urlToken) {
-      setScannerToken(urlToken);
-      window.history.replaceState({}, '', '/scan');
+    let token: string | null = null;
+    try {
+      token = localStorage.getItem('scanner_token');
+      if (token) localStorage.removeItem('scanner_token');
+    } catch { /* storage unavailable */ }
+    if (token) {
+      setScannerToken(token);
       setState('scanning');
       return;
     }

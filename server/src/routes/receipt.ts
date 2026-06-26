@@ -1,10 +1,17 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
 import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
-import { FILE } from '../lib/constants';
+import { FILE, MS } from '../lib/constants';
 
 const router = Router();
+
+const uploadLimiter = rateLimit({
+  windowMs: MS.FIFTEEN_MINUTES,
+  max: 3,
+  message: { success: false, error: 'Too many upload attempts' },
+});
 
 const ALLOWED_TYPES = FILE.ALLOWED_RECEIPT_TYPES;
 const MAX_SIZE = FILE.MAX_UPLOAD_SIZE;
@@ -31,6 +38,7 @@ const upload = multer({
 
 router.post(
   '/upload-receipt',
+  uploadLimiter,
   upload.single('receipt_image'),
   async (req: Request, res: Response) => {
     try {

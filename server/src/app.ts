@@ -69,12 +69,17 @@ app.get('/api/health', async (_req, res) => {
 // Rate limiters
 const bookLimiter = rateLimit({ windowMs: MS.FIFTEEN_MINUTES, max: 5, message: { success: false, error: 'Too many booking attempts' } });
 const uploadLimiter = rateLimit({ windowMs: MS.FIFTEEN_MINUTES, max: 3, message: { success: false, error: 'Too many upload attempts' } });
+const waitlistLimiter = rateLimit({ windowMs: MS.FIFTEEN_MINUTES, max: 10, message: { success: false, error: 'Too many waitlist signups' } });
+const ticketLimiter = rateLimit({ windowMs: MS.ONE_HOUR, max: 300, message: { success: false, error: 'Too many requests' } });
+const exportLimiter = rateLimit({ windowMs: MS.FIFTEEN_MINUTES, max: 5, message: { success: false, error: 'Too many export requests' } });
+const configLimiter = rateLimit({ windowMs: MS.ONE_HOUR, max: 100, message: { success: false, error: 'Too many requests' } });
 
+app.use('/api/config', configLimiter);
 app.use('/api/events', eventsRouter);
-app.use('/api/ticket', ticketRouter);
+app.use('/api/ticket', ticketLimiter, ticketRouter);
 app.use('/api/book', bookLimiter, bookingRouter);
-app.use('/api/payment', uploadLimiter, receiptRouter);
-app.use('/api/waitlist', waitlistRouter);
+app.use('/api/payment', receiptRouter);
+app.use('/api/waitlist', waitlistLimiter, waitlistRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/admin/events', adminEventsRouter);
 

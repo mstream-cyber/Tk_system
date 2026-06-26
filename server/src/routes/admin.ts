@@ -19,8 +19,18 @@ const loginLimiter = rateLimit({
   message: { success: false, error: 'Too many login attempts' }
 });
 
+const scanPinLimiter = rateLimit({
+  windowMs: MS.FIFTEEN_MINUTES,
+  max: 5,
+  message: { success: false, error: 'Too many PIN attempts' }
+});
+
 router.post('/login', loginLimiter, (req: Request, res: Response) => {
   const { password } = req.body;
+  if (typeof password !== 'string' || !password.trim()) {
+    res.status(400).json(error('Password is required'));
+    return;
+  }
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (!adminPassword || password !== adminPassword) {
     res.status(401).json(error('Invalid password'));
@@ -34,7 +44,7 @@ router.post('/login', loginLimiter, (req: Request, res: Response) => {
     maxAge: MS.EIGHT_HOURS,
     path: '/',
   });
-  res.json(success({ token }));
+  res.json(success({ message: 'Login successful' }));
 });
 
 router.use(requireRole('admin'));
@@ -118,8 +128,12 @@ router.get('/stats', async (_req: Request, res: Response) => {
   res.json(success(statsResult));
 });
 
-router.post('/verify-scan-pin', async (req: Request, res: Response) => {
+router.post('/verify-scan-pin', scanPinLimiter, (req: Request, res: Response) => {
   const { pin } = req.body;
+  if (typeof pin !== 'string' || !pin.trim()) {
+    res.status(400).json(error('PIN is required'));
+    return;
+  }
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (!adminPassword || pin !== adminPassword) {
     res.status(401).json(error('Invalid PIN'));

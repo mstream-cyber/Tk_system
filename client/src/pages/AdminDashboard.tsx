@@ -87,7 +87,10 @@ export default function AdminDashboard() {
 
   const handleScanSuccess = useCallback((token: string) => {
     setShowScanModal(false);
-    window.open(`/scan?token=${token}`, '_blank', 'noopener');
+    try {
+      localStorage.setItem('scanner_token', token);
+    } catch { /* storage unavailable */ }
+    window.open('/scan', '_blank', 'noopener');
   }, []);
 
   const handleSaleSuccess = useCallback(() => {
