@@ -323,7 +323,7 @@ export async function sendVerificationEmail(params: {
   buyer_email: string;
   ticket_id: string;
   verification_code: string;
-}) {
+}): Promise<boolean> {
   const transport = getTransporter();
   const subject = 'Your booking verification code';
   const htmlBody = `
@@ -363,13 +363,16 @@ export async function sendVerificationEmail(params: {
         text: textBody,
       });
       console.log(`Verification email sent to ${params.buyer_email} for order ${params.ticket_id}`);
+      return true;
     } catch (err) {
       console.error(`Failed to send verification email for order ${params.ticket_id}:`, err);
+      return false;
     }
   } else {
     console.log(`[EMAIL STUB] To: ${params.buyer_email}`);
     console.log(`[EMAIL STUB] Subject: ${subject}`);
     console.log(`[EMAIL STUB] Code: ${params.verification_code}`);
+    return true;
   }
 }
 

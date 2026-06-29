@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
 import { MS } from '../lib/constants';
+import { sendVerificationEmail } from '../services/email';
 
 const router = Router();
 
@@ -135,15 +136,24 @@ router.post('/:order_id/resend', resendLimiter, async (req: Request, res: Respon
     })
     .eq('id', order_id);
 
-  const { sendVerificationEmail } = await import('../services/email');
-  sendVerificationEmail({
+  const emailPromise = sendVerificationEmail({
     buyer_name: String(order.buyer_name),
     buyer_email: String(order.buyer_email),
     ticket_id: String(order_id),
     verification_code: newCode,
-  }).catch((err: Error) => console.error('Failed to send verification email:', err));
+  });
 
-  res.json(success({ message: 'Verification code sent' }));
+  const timeoutMs = 10_000;
+  const emailResult = await Promise.race([
+    emailPromise,
+    new Promise<boolean>((resolve) => setTimeout(() => resolve(false), timeoutMs)),
+  ]);
+
+  if (emailResult) {
+    res.json(success({ message: 'Verification code sent' }));
+  } else {
+    res.status(500).json(error('Failed to send verification code. Please try again.'));
+  }
 });
 
 export default router;
