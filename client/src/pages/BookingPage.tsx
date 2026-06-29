@@ -256,6 +256,25 @@ export default function BookingPage() {
     return () => clearInterval(id);
   }, [countdown]);
 
+  useEffect(() => {
+    if (step !== 3 || !booking) return;
+    let cancelled = false;
+    setVerifyLoading(true);
+    resendVerificationCode(booking.order_id).then((res) => {
+      if (cancelled) return;
+      if (res.success) {
+        setCountdown(60);
+      } else {
+        setVerifyError(res.error || 'Failed to send verification code');
+      }
+    }).catch(() => {
+      if (!cancelled) setVerifyError('Network error. Please request a new code.');
+    }).finally(() => {
+      if (!cancelled) setVerifyLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [step]);
+
   const handleVerifySubmit = useCallback(async () => {
     const code = verifyCode.join('');
     if (code.length !== 6) { setVerifyError('Enter the full 6-digit code'); return; }

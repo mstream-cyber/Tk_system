@@ -42,16 +42,11 @@ router.post(
   upload.single('receipt_image'),
   async (req: Request, res: Response) => {
     try {
-      const { order_id, buyer_email } = req.body;
+      const { order_id } = req.body;
       const file = req.file;
 
       if (!order_id) {
         res.status(400).json(error('order_id is required'));
-        return;
-      }
-
-      if (!buyer_email) {
-        res.status(400).json(error('buyer_email is required'));
         return;
       }
 
@@ -69,22 +64,12 @@ router.post(
 
       const { data: order, error: findErr } = await supabase
         .from('orders')
-        .select('id, payment_status, buyer_email, email_verified')
+        .select('id, payment_status')
         .eq('id', order_id)
         .single();
 
       if (findErr || !order) {
         res.status(404).json(error('Order not found'));
-        return;
-      }
-
-      if (!order.email_verified) {
-        res.status(403).json(error('Email not verified'));
-        return;
-      }
-
-      if (order.buyer_email !== buyer_email) {
-        res.status(403).json(error('Email does not match order'));
         return;
       }
 

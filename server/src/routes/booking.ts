@@ -106,14 +106,6 @@ router.post('/', validate, async (req: Request, res: Response) => {
     })
     .eq('id', order.id);
 
-  const { sendVerificationEmail } = await import('../services/email');
-  sendVerificationEmail({
-    buyer_name: order.buyer_name,
-    buyer_email: order.buyer_email,
-    ticket_id: order.ticket_id,
-    verification_code: verificationCode,
-  }).catch((err: Error) => console.error('Failed to send verification email:', err));
-
   res.status(201).json(success({
     order_id: order.id,
     ticket_id: order.ticket_id,
