@@ -10,7 +10,10 @@ router.get('/:ticket_id', async (req, res) => {
 
   const { data, error: dbError } = await supabase
     .from('orders')
-    .select('*, ticket_types(*, events(*))')
+    .select(`
+      id, ticket_id, buyer_name, quantity, total_amount, payment_status, email_verified, created_at,
+      ticket_types(id, name, price, events(id, name, date, venue, city, time, poster_url, organizer_phone, location_link, terms_conditions))
+    `)
     .eq('ticket_id', ticket_id)
     .single();
 
@@ -26,6 +29,15 @@ router.get('/:ticket_id', async (req, res) => {
 
   if (!data) {
     res.status(404).json(error('Ticket not found'));
+    return;
+  }
+
+  if (!data.email_verified) {
+    res.json(success({
+      ticket_id: data.ticket_id,
+      payment_status: data.payment_status,
+      email_verified: false,
+    }));
     return;
   }
 

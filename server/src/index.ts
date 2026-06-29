@@ -1,6 +1,6 @@
 import app from './app';
 
-const REQUIRED_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'JWT_SECRET', 'ADMIN_PASSWORD', 'SCAN_PIN'];
+const REQUIRED_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'JWT_SECRET', 'ADMIN_PASSWORD', 'SCAN_PIN', 'VERIFICATION_SALT'];
 for (const key of REQUIRED_ENV) {
   if (!process.env[key]) {
     console.error(`FATAL: ${key} environment variable is not set`);

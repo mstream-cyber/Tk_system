@@ -59,10 +59,15 @@ CREATE TABLE orders (
   scanned_at TIMESTAMPTZ,
   ticket_id TEXT UNIQUE NOT NULL,
   scan_token TEXT UNIQUE,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  email_verified BOOLEAN DEFAULT false,
+  verification_code_hash TEXT,
+  verification_attempts INTEGER DEFAULT 0,
+  verification_code_sent_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_orders_scan_token ON orders (scan_token);
+CREATE INDEX idx_orders_email_verified ON orders (ticket_id, email_verified);
 
 -- ============================
 -- WAITLIST

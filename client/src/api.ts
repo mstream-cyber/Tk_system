@@ -73,9 +73,32 @@ export function uploadReceiptWithProgress(
 }
 
 export async function getOrderStatus(
-  orderId: string
+  orderId: string,
+  email?: string
 ): Promise<ApiResponse<OrderStatus>> {
-  const res = await fetch(`${BASE}/payment/order/${orderId}/status`);
+  const params = email ? `?email=${encodeURIComponent(email)}` : '';
+  const res = await fetch(`${BASE}/payment/order/${orderId}/status${params}`);
+  return res.json();
+}
+
+export async function verifyEmail(
+  orderId: string,
+  code: string
+): Promise<ApiResponse<{ message: string }>> {
+  const res = await fetch(`${BASE}/verify/${orderId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  return res.json();
+}
+
+export async function resendVerificationCode(
+  orderId: string
+): Promise<ApiResponse<{ message: string }>> {
+  const res = await fetch(`${BASE}/verify/${orderId}/resend`, {
+    method: 'POST',
+  });
   return res.json();
 }
 

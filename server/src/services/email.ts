@@ -318,6 +318,61 @@ export async function sendTicketEmail(order: Order) {
   }
 }
 
+export async function sendVerificationEmail(params: {
+  buyer_name: string;
+  buyer_email: string;
+  ticket_id: string;
+  verification_code: string;
+}) {
+  const transport = getTransporter();
+  const subject = 'Your booking verification code';
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f4f4f8;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:20px auto;background:#ffffff;border-radius:12px;overflow:hidden;">
+<tr><td style="background:#534AB7;padding:24px;text-align:center;">
+  <img src="${logoUrl()}" alt="Mawj stream" style="height:36px;width:auto;margin-bottom:12px;" />
+  <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;">Verify Your Booking</h1>
+</td></tr>
+<tr><td style="padding:24px;">
+  <p style="margin:0 0 16px;font-size:15px;color:#333;">Hi <strong>${escapeHtml(params.buyer_name)}</strong>,</p>
+  <p style="margin:0 0 20px;font-size:14px;color:#555;">Your verification code is:</p>
+  <div style="text-align:center;margin:24px 0;padding:16px;background:#f8f8fc;border-radius:8px;">
+    <span style="font-size:36px;font-weight:bold;color:#534AB7;letter-spacing:8px;font-family:monospace;">${escapeHtml(params.verification_code)}</span>
+  </div>
+  <p style="margin:0 0 12px;font-size:13px;color:#888;">This code expires in <strong>5 minutes</strong>.</p>
+  <p style="margin:0;font-size:13px;color:#888;">If you didn't make this booking, please ignore this email.</p>
+</td></tr>
+<tr><td style="background:#1a1a2e;padding:16px 24px;text-align:center;">
+  <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.5);">Mawj stream Ticket Portal</p>
+</td></tr>
+</table>
+</body>
+</html>`.trim();
+  const textBody = `Hi ${params.buyer_name},\n\nYour verification code is: ${params.verification_code}\n\nThis code expires in 5 minutes.\n\nIf you didn't make this booking, ignore this email.`;
+
+  if (transport) {
+    try {
+      await transport.sendMail({
+        from: process.env.SMTP_FROM || 'noreply@globaltickets.com',
+        to: params.buyer_email,
+        subject,
+        html: htmlBody,
+        text: textBody,
+      });
+      console.log(`Verification email sent to ${params.buyer_email} for order ${params.ticket_id}`);
+    } catch (err) {
+      console.error(`Failed to send verification email for order ${params.ticket_id}:`, err);
+    }
+  } else {
+    console.log(`[EMAIL STUB] To: ${params.buyer_email}`);
+    console.log(`[EMAIL STUB] Subject: ${subject}`);
+    console.log(`[EMAIL STUB] Code: ${params.verification_code}`);
+  }
+}
+
 export async function sendRejectionEmail(order: Order, reason: string) {
   const transport = getTransporter();
   const subject = `Action needed — payment not verified ${order.ticket_id}`;

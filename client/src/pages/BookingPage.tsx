@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { fetchEvents, createBooking, uploadReceiptWithProgress, getOrderStatus, fetchConfig, joinWaitlist } from '../api';
+import { fetchEvents, createBooking, uploadReceiptWithProgress, getOrderStatus, fetchConfig, joinWaitlist, verifyEmail, resendVerificationCode } from '../api';
 import { formatPrice, formatDate } from '../utils/format';
 import type { EventType, FormData, BookingData, PaymentConfig } from '../types';
 import { Button } from '../components/ui/Button';
@@ -24,7 +24,7 @@ const emptyForm: FormData = {
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
   const urlEventId = searchParams.get('eventId');
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [events, setEvents] = useState<EventType[]>([]);
   const [config, setConfig] = useState<PaymentConfig | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
@@ -38,6 +38,10 @@ export default function BookingPage() {
   const [uploadFailed, setUploadFailed] = useState(false);
   const [statusChecked, setStatusChecked] = useState(false);
   const [statusResult, setStatusResult] = useState<'approved' | 'pending' | null>(null);
+  const [verifyCode, setVerifyCode] = useState<string[]>(Array(6).fill(''));
+  const [verifyError, setVerifyError] = useState('');
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [waitlistEmail, setWaitlistEmail] = useState('');
   const [waitlistMsg, setWaitlistMsg] = useState('');
@@ -175,6 +179,7 @@ export default function BookingPage() {
 
     if (uploadRes.success) {
       setStep(3);
+      setCountdown(60);
     } else {
       setUploadFailed(true);
       setErrors({ api: uploadRes.error || 'Receipt upload failed. Please try again.' });
@@ -195,6 +200,7 @@ export default function BookingPage() {
     setLoading(false);
     if (res.success) {
       setStep(3);
+      setCountdown(60);
     } else {
       setUploadFailed(true);
       setErrors({ api: res.error || 'Upload failed. Please try again.' });
@@ -233,6 +239,9 @@ export default function BookingPage() {
     setUploadFailed(false);
     setStatusChecked(false);
     setStatusResult(null);
+    setVerifyCode(Array(6).fill(''));
+    setVerifyError('');
+    setCountdown(0);
     setStep(1);
   }, []);
 
@@ -240,6 +249,62 @@ export default function BookingPage() {
     if (!booking) return;
     try { await navigator.clipboard.writeText(booking.ticket_id); } catch { /* ignore */ }
   }, [booking]);
+
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const id = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
+  }, [countdown]);
+
+  const handleVerifySubmit = useCallback(async () => {
+    const code = verifyCode.join('');
+    if (code.length !== 6) { setVerifyError('Enter the full 6-digit code'); return; }
+    if (!booking) return;
+    setVerifyLoading(true);
+    setVerifyError('');
+    const res = await verifyEmail(booking.order_id, code);
+    setVerifyLoading(false);
+    if (res.success) {
+      setStep(4);
+    } else {
+      setVerifyError(res.error || 'Verification failed');
+      setVerifyCode(Array(6).fill(''));
+    }
+  }, [verifyCode, booking]);
+
+  const handleResendCode = useCallback(async () => {
+    if (!booking || countdown > 0) return;
+    setVerifyError('');
+    const res = await resendVerificationCode(booking.order_id);
+    if (res.success) {
+      setCountdown(60);
+      setVerifyCode(Array(6).fill(''));
+      setVerifyError('');
+    } else {
+      setVerifyError(res.error || 'Failed to resend code');
+    }
+  }, [booking, countdown]);
+
+  const handleVerifyCodeChange = useCallback((index: number, value: string) => {
+    if (value && !/^\d$/.test(value)) return;
+    setVerifyCode((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+    setVerifyError('');
+    if (value && index < 5) {
+      const nextInput = document.getElementById(`vcode-${index + 1}`);
+      nextInput?.focus();
+    }
+  }, []);
+
+  const handleVerifyKeyDown = useCallback((index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !verifyCode[index] && index > 0) {
+      const prevInput = document.getElementById(`vcode-${index - 1}`);
+      prevInput?.focus();
+    }
+  }, [verifyCode]);
 
   const inputFields = [
     { key: 'buyerName', label: 'Full Name', type: 'text', placeholder: 'e.g. John Doe' },
@@ -476,7 +541,56 @@ export default function BookingPage() {
     </div>
   );
 
-  const renderStep3 = () => (
+  const renderStep3 = () => {
+    return (
+      <div className="text-center">
+        <div className="mb-6">
+          <div className="w-20 h-20 rounded-full bg-accent-subtle flex items-center justify-center mx-auto mb-4">
+            <svg className="w-10 h-10 text-accent-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 7l-10 7L2 7" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-content mb-2">Verify your email</h2>
+          <p className="text-sm text-content-muted">
+            We sent a 6-digit code to <strong className="text-content-secondary">{form.buyerEmail}</strong>
+          </p>
+        </div>
+
+        <div className="flex gap-2 justify-center mb-6">
+          {verifyCode.map((digit, i) => (
+            <input
+              key={i}
+              id={`vcode-${i}`}
+              type="text"
+              inputMode="numeric"
+              maxLength={1}
+              value={digit}
+              onChange={(e) => handleVerifyCodeChange(i, e.target.value)}
+              onKeyDown={(e) => handleVerifyKeyDown(i, e)}
+              className="w-12 h-14 text-center text-xl font-bold bg-input border border-border rounded-lg text-content outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+              autoFocus={i === 0}
+            />
+          ))}
+        </div>
+
+        {verifyError && <p className="text-danger-light text-sm mb-4">{verifyError}</p>}
+
+        <Button onClick={handleVerifySubmit} disabled={verifyLoading || verifyCode.join('').length !== 6} loading={verifyLoading} className="w-full mb-3">
+          {verifyLoading ? 'Verifying...' : 'Verify Email'}
+        </Button>
+
+        <button
+          onClick={handleResendCode}
+          disabled={countdown > 0}
+          className="text-sm text-content-muted hover:text-accent-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend code'}
+        </button>
+      </div>
+    );
+  };
+
+  const renderStep4 = () => (
     <div className="text-center">
       {statusResult === 'approved' ? (
         <>
@@ -554,11 +668,12 @@ export default function BookingPage() {
     <div className="min-h-screen bg-surface py-6 px-4">
       <div className="max-w-[480px] mx-auto">
         <LogoHeader />
-        <StepIndicator steps={3} currentStep={step} />
+        <StepIndicator steps={4} currentStep={step} />
         <Card>
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
+          {step === 4 && renderStep4()}
         </Card>
       </div>
     </div>

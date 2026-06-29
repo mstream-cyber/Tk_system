@@ -53,6 +53,27 @@ export default function TicketPage() {
     );
   }
 
+  if (order.email_verified === false) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center px-4">
+        <div className="text-center max-w-[400px]">
+          <div className="w-20 h-20 rounded-full bg-accent-subtle flex items-center justify-center mx-auto mb-4">
+            <svg className="w-10 h-10 text-accent-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 7l-10 7L2 7" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-content mb-2">Check your email</h2>
+          <p className="text-sm text-content-muted mb-6">
+            A verification code was sent to your email. Please check your inbox and enter the code to view your ticket.
+          </p>
+          <Link to="/">
+            <Button className="w-full">Go to Booking</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const event = order.ticket_types?.events;
   const eventName = event?.name || '';
   const eventDate = event?.date || '';
@@ -74,8 +95,8 @@ export default function TicketPage() {
           <LogoHeader />
           <TicketCard
             ticketId={order.ticket_id}
-            scanToken={order.scan_token}
-            buyerName={order.buyer_name}
+            scanToken={order.scan_token!}
+            buyerName={order.buyer_name!}
             eventName={eventName}
             eventDate={eventDate}
             eventVenue={eventVenue}
@@ -86,8 +107,8 @@ export default function TicketPage() {
           <Button
             onClick={() => downloadTicketPDF({
               ticketId: order.ticket_id,
-              scanToken: order.scan_token,
-              buyerName: order.buyer_name,
+              scanToken: order.scan_token!,
+              buyerName: order.buyer_name!,
               eventName,
               eventDate,
               eventVenue,

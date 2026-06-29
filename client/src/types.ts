@@ -48,6 +48,7 @@ export interface BookingData {
 export interface OrderStatus {
   payment_status: string;
   ticket_id: string | null;
+  email_verified?: boolean;
 }
 
 export interface PaymentConfig {
@@ -63,10 +64,11 @@ export interface PaymentConfig {
 export interface TicketOrder {
   id: string;
   ticket_id: string;
-  scan_token: string;
-  buyer_name: string;
-  buyer_email: string;
-  buyer_phone: string;
+  email_verified?: boolean;
+  scan_token?: string;
+  buyer_name?: string;
+  buyer_email?: string;
+  buyer_phone?: string;
   buyer_city: string | null;
   quantity: number;
   total_amount: number;
