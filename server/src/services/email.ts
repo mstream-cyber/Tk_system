@@ -232,7 +232,7 @@ function buildApprovalHtml(order: Order, qrBase64: string): string {
   ${termsConditions ? `
   <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:20px 0;">
     <p style="margin:0 0 6px;font-size:12px;color:#92400e;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">Terms &amp; Conditions</p>
-    <p style="margin:0;font-size:13px;color:#78350f;line-height:1.5;">${escapeHtml(termsConditions)}</p>
+    <div style="margin:0;font-size:13px;color:#78350f;line-height:1.8;">${escapeHtml(termsConditions).split('\n').filter(Boolean).join('<br>')}</div>
   </div>` : ''}
   <div style="text-align:center;margin:24px 0 12px;">
     <a href="${ticketUrl}" style="display:inline-block;background:#534AB7;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:bold;">View &amp; Download Your Ticket</a>
