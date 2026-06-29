@@ -29,9 +29,9 @@ export default function App() {
             <Routes>
               <Route path="/" element={<BookingPage />} />
               <Route path="/ticket/:ticket_id" element={<TicketPage />} />
-              <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/23646" element={<Navigate to="/23646/login" replace />} />
+              <Route path="/23646/login" element={<AdminLogin />} />
+              <Route path="/23646/dashboard" element={<AdminDashboard />} />
               <Route path="/event/:id" element={<EventPage />} />
               <Route path="/scan" element={<ScanPage />} />
               <Route path="/404" element={<NotFound />} />

@@ -24,7 +24,7 @@ export default function AdminLogin() {
       const data = await res.json();
 
       if (data.success) {
-        navigate('/admin/dashboard');
+        navigate('/23646/dashboard');
       } else {
         setError(data.error || 'Login failed');
       }

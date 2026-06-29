@@ -24,7 +24,7 @@ export function useApi() {
         headers,
       });
       if (res.status === 401) {
-        navigate('/admin/login', { replace: true });
+        navigate('/23646/login', { replace: true });
         return null;
       }
       return res.json();

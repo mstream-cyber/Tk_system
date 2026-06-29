@@ -85,7 +85,7 @@ export default function AdminDashboard() {
   }, [activeTab, fetchEvents]);
 
   const handleLogout = useCallback(() => {
-    navigate('/admin/login', { replace: true });
+    navigate('/23646/login', { replace: true });
   }, [navigate]);
 
   const handleScanSuccess = useCallback((token: string) => {
