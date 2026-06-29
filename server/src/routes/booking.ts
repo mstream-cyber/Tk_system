@@ -1,20 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import crypto from 'crypto';
 import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
 import { generateTicketId } from '../utils/ticketId';
 import { generateScanToken } from '../utils/scanToken';
-
-const VERIFICATION_SALT = process.env.VERIFICATION_SALT || 'fallback-salt';
-
-function hashCode(code: string): string {
-  return crypto.createHmac('sha256', VERIFICATION_SALT).update(code).digest('hex');
-}
-
-function generateCode(): string {
-  return String(crypto.randomInt(0, 1000000)).padStart(6, '0');
-}
 
 const router = Router();
 
@@ -95,16 +84,6 @@ router.post('/', validate, async (req: Request, res: Response) => {
     res.status(409).json(error('Inventory changed, please retry'));
     return;
   }
-
-  const verificationCode = generateCode();
-  const codeHash = hashCode(verificationCode);
-  await supabase
-    .from('orders')
-    .update({
-      verification_code_hash: codeHash,
-      verification_code_sent_at: new Date().toISOString(),
-    })
-    .eq('id', order.id);
 
   res.status(201).json(success({
     order_id: order.id,
