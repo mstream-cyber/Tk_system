@@ -6,7 +6,7 @@ import { success, error } from '../utils/response';
 import { requireRole, generateToken } from '../middleware/auth';
 import type { AuthRequest } from '../middleware/auth';
 import { MS } from '../lib/constants';
-import { sendTicketEmail, sendRejectionEmail } from '../services/email';
+import { sendTicketEmail, sendRejectionEmail, sendNewOrderNotification } from '../services/email';
 import { generateTicketId } from '../utils/ticketId';
 import { generateScanToken } from '../utils/scanToken';
 import type { Order } from '../services/email';
@@ -242,6 +242,23 @@ router.post('/gate-sales',
       ticket_types: ticketType,
     };
     sendTicketEmail(emailOrder).catch((err) => console.error(`Failed to send ticket email for gate sale ${order.id}:`, err));
+
+    const notifyTo = process.env.NOTIFY_EMAIL
+    if (notifyTo) {
+      sendNewOrderNotification({
+        buyer_name,
+        buyer_email,
+        buyer_phone,
+        buyer_city,
+        ticket_type_name: ticketType.name,
+        event_name: ticketType.events?.name || 'Event',
+        quantity,
+        total_amount,
+        ticket_id: order.ticket_id,
+        order_id: order.id,
+        payment_method: 'cash',
+      }).catch((err) => console.error('Failed to send order notification:', err))
+    }
 
     res.json(success({
       order_id: order.id,

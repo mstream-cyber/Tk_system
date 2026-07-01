@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
 import { generateTicketId } from '../utils/ticketId';
 import { generateScanToken } from '../utils/scanToken';
+import { sendNewOrderNotification } from '../services/email';
 
 const router = Router();
 
@@ -30,7 +31,7 @@ router.post('/', validate, async (req: Request, res: Response) => {
 
   const { data: ticketType, error: fetchErr } = await supabase
     .from('ticket_types')
-    .select('*')
+    .select('*, events!inner(name)')
     .eq('id', ticket_type_id)
     .single();
 
@@ -83,6 +84,23 @@ router.post('/', validate, async (req: Request, res: Response) => {
     await supabase.from('orders').delete().eq('id', order.id);
     res.status(409).json(error('Inventory changed, please retry'));
     return;
+  }
+
+  const notifyTo = process.env.NOTIFY_EMAIL
+  if (notifyTo) {
+    sendNewOrderNotification({
+      buyer_name,
+      buyer_email,
+      buyer_phone,
+      buyer_city,
+      ticket_type_name: ticketType.name,
+      event_name: (ticketType as any).events?.name || 'Event',
+      quantity,
+      total_amount,
+      ticket_id,
+      order_id: order.id,
+      payment_method,
+    }).catch((err) => console.error('Failed to send order notification:', err))
   }
 
   res.status(201).json(success({

@@ -377,6 +377,73 @@ export async function sendVerificationEmail(params: {
   }
 }
 
+export async function sendNewOrderNotification(params: {
+  buyer_name: string
+  buyer_email: string
+  buyer_phone: string
+  buyer_city: string | null
+  ticket_type_name: string
+  event_name: string
+  quantity: number
+  total_amount: number
+  ticket_id: string
+  order_id: string
+  payment_method: string
+}) {
+  const transport = getTransporter()
+  const notifyEmail = process.env.NOTIFY_EMAIL
+  if (!transport || !notifyEmail) return
+
+  const subject = `New Booking — ${params.event_name}`
+  const adminUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/23646/dashboard`
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f4f4f8;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:20px auto;background:#ffffff;border-radius:12px;overflow:hidden;">
+<tr><td style="background:#534AB7;padding:24px;text-align:center;">
+  <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;">New Booking Received</h1>
+  <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">${escapeHtml(params.event_name)}</p>
+</td></tr>
+<tr><td style="padding:24px;">
+  <p style="margin:0 0 16px;font-size:15px;color:#333;">A new booking has been placed:</p>
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f8fc;border-radius:8px;padding:16px;">
+    <tr><td style="padding:6px 12px;font-size:13px;color:#888;width:120px;">Event</td><td style="padding:6px 12px;font-size:14px;color:#222;font-weight:bold;">${escapeHtml(params.event_name)}</td></tr>
+    <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Ticket Type</td><td style="padding:6px 12px;font-size:14px;color:#222;">${escapeHtml(params.ticket_type_name)}</td></tr>
+    <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Buyer</td><td style="padding:6px 12px;font-size:14px;color:#222;">${escapeHtml(params.buyer_name)}</td></tr>
+    <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Email</td><td style="padding:6px 12px;font-size:14px;color:#222;">${escapeHtml(params.buyer_email)}</td></tr>
+    <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Phone</td><td style="padding:6px 12px;font-size:14px;color:#222;">${escapeHtml(params.buyer_phone)}</td></tr>
+    ${params.buyer_city ? `<tr><td style="padding:6px 12px;font-size:13px;color:#888;">City</td><td style="padding:6px 12px;font-size:14px;color:#222;">${escapeHtml(params.buyer_city)}</td></tr>` : ''}
+    <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Quantity</td><td style="padding:6px 12px;font-size:14px;color:#222;">${params.quantity}</td></tr>
+    <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Total</td><td style="padding:6px 12px;font-size:14px;color:#222;font-weight:bold;">${formatPkr(params.total_amount)}</td></tr>
+    <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Payment</td><td style="padding:6px 12px;font-size:14px;color:#222;">${escapeHtml(params.payment_method)}</td></tr>
+    <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Ticket ID</td><td style="padding:6px 12px;font-size:14px;color:#222;font-family:monospace;">${escapeHtml(params.ticket_id)}</td></tr>
+  </table>
+  <div style="text-align:center;margin:24px 0 12px;">
+    <a href="${adminUrl}" style="display:inline-block;background:#534AB7;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:bold;">View in Admin Dashboard</a>
+  </div>
+</td></tr>
+<tr><td style="background:#1a1a2e;padding:16px 24px;text-align:center;">
+  <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.5);">Mawj stream Ticket Portal</p>
+</td></tr>
+</table>
+</body>
+</html>`.trim()
+
+  try {
+    await transport.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@globaltickets.com',
+      to: notifyEmail,
+      subject,
+      html: htmlBody,
+    })
+    console.log(`Order notification sent for ${params.ticket_id}`)
+  } catch (err) {
+    console.error(`Failed to send order notification for ${params.ticket_id}:`, err)
+  }
+}
+
 export async function sendRejectionEmail(order: Order, reason: string) {
   const transport = getTransporter();
   const subject = `Action needed — payment not verified ${order.ticket_id}`;
