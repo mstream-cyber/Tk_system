@@ -64,7 +64,7 @@ router.get('/orders', async (req: Request, res: Response) => {
 
   let queryBuilder = supabase
     .from('orders')
-    .select(`*, ticket_types ( name, price, events ( name, date, venue, city, organizer_phone, location_link, terms_conditions ) )`)
+    .select(`*, ticket_types ( name, price, events ( name, date, time, venue, city, organizer_phone, location_link, terms_conditions ) )`)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -93,7 +93,7 @@ router.post('/orders/:order_id/approve', async (req: AuthRequest, res: Response)
   const { order_id } = req.params;
   const { data: order, error: fetchErr } = await supabase
     .from('orders')
-    .select(`*, ticket_types ( name, price, events ( name, date, venue, city, organizer_phone, location_link, terms_conditions ) )`)
+    .select(`*, ticket_types ( name, price, events ( name, date, time, venue, city, organizer_phone, location_link, terms_conditions ) )`)
     .eq('id', order_id).single();
   if (fetchErr || !order) { res.status(404).json(error('Order not found')); return; }
   if (order.payment_status !== 'receipt_uploaded') { res.status(400).json(error('Order must be in receipt_uploaded status')); return; }
@@ -255,7 +255,7 @@ router.post('/gate-sales',
 
 router.post('/resend/:order_id', async (req: Request, res: Response) => {
   const { order_id } = req.params;
-  const { data: order, error: fetchErr } = await supabase.from('orders').select(`*, ticket_types ( name, price, events ( name, date, venue, city, organizer_phone, location_link, terms_conditions ) )`).eq('id', order_id).single();
+  const { data: order, error: fetchErr } = await supabase.from('orders').select(`*, ticket_types ( name, price, events ( name, date, time, venue, city, organizer_phone, location_link, terms_conditions ) )`).eq('id', order_id).single();
   if (fetchErr || !order) { res.status(404).json(error('Order not found')); return; }
   if (order.payment_status !== 'approved') { res.status(400).json(error('Can only resend tickets for approved orders')); return; }
   const emailOrder: Order = { id: order.id, ticket_id: order.ticket_id, scan_token: order.scan_token, buyer_name: order.buyer_name, buyer_email: order.buyer_email, quantity: order.quantity, total_amount: order.total_amount, payment_method: order.payment_method, ticket_types: order.ticket_types };
@@ -264,7 +264,7 @@ router.post('/resend/:order_id', async (req: Request, res: Response) => {
 });
 
 router.get('/export', async (_req: Request, res: Response) => {
-  const { data: orders, error: fetchErr } = await supabase.from('orders').select(`*, ticket_types ( name, price, events ( name, date, venue, city, organizer_phone, location_link, terms_conditions ) )`).order('created_at', { ascending: false });
+  const { data: orders, error: fetchErr } = await supabase.from('orders').select(`*, ticket_types ( name, price, events ( name, date, time, venue, city, organizer_phone, location_link, terms_conditions ) )`).order('created_at', { ascending: false });
   if (fetchErr) { res.status(500).json(error('Failed to export orders')); return; }
   const headers = ['Ticket ID', 'Buyer Name', 'Email', 'Phone', 'City', 'Event', 'Ticket Type', 'Quantity', 'Total Amount (PKR)', 'Payment Method', 'Payment Status', 'Created At'];
   const rows = orders.map((o) => [o.ticket_id, o.buyer_name, o.buyer_email, o.buyer_phone, o.buyer_city || '', o.ticket_types?.events?.name || '', o.ticket_types?.name || '', o.quantity, (o.total_amount / 100).toFixed(2), o.payment_method, o.payment_status, o.created_at]);

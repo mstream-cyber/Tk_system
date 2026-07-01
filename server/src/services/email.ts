@@ -11,6 +11,7 @@ export interface OrderTicketType {
 export interface OrderEvent {
   name?: string;
   date?: string;
+  time?: string;
   venue?: string;
   city?: string;
   organizer_phone?: string;
@@ -88,7 +89,7 @@ export async function generateTicketPDF(order: Order, qrBase64: string): Promise
   const eventName = event?.name || 'Event';
   const ticketType = order.ticket_types?.name || 'Ticket';
   const dateStr = event?.date ? formatDate(event.date) : '—';
-  const timeStr = event?.date ? formatTime(event.date) : '';
+  const timeStr = event?.time || (event?.date ? formatTime(event.date) : '');
   const venue = event?.venue || '—';
   const city = event?.city || '';
 
@@ -195,7 +196,7 @@ function buildApprovalHtml(order: Order, qrBase64: string): string {
   const event = order.ticket_types?.events;
   const eventName = escapeHtml(event?.name || 'Event');
   const dateStr = escapeHtml(event?.date ? formatDate(event.date) : '—');
-  const timeStr = escapeHtml(event?.date ? formatTime(event.date) : '');
+  const timeStr = escapeHtml(event?.time || (event?.date ? formatTime(event.date) : ''));
   const venue = escapeHtml(event?.venue || '—');
   const city = escapeHtml(event?.city || '');
   const ticketType = escapeHtml(order.ticket_types?.name || 'Ticket');
