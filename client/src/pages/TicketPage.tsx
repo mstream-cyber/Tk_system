@@ -83,6 +83,7 @@ export default function TicketPage() {
   const event = order.ticket_types?.events;
   const eventName = event?.name || '';
   const eventDate = event?.date || '';
+  const eventTime = event?.time || '';
   const eventVenue = event ? `${event.venue}, ${event.city}` : '';
 
   const isApproved = order.payment_status === 'approved';
@@ -105,6 +106,7 @@ export default function TicketPage() {
             buyerName={order.buyer_name!}
             eventName={eventName}
             eventDate={eventDate}
+            eventTime={eventTime}
             eventVenue={eventVenue}
             ticketType={order.ticket_types?.name || 'Ticket'}
             quantity={order.quantity}
@@ -117,6 +119,7 @@ export default function TicketPage() {
               buyerName: order.buyer_name!,
               eventName,
               eventDate,
+              eventTime,
               eventVenue,
               ticketType: order.ticket_types?.name || 'Ticket',
               quantity: order.quantity,

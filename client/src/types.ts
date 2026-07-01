@@ -81,6 +81,7 @@ export interface TicketOrder {
       events: {
         name: string;
         date: string;
+        time?: string;
         venue: string;
         city: string;
         banner_url: string | null;

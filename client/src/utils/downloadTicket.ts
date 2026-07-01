@@ -8,6 +8,7 @@ export interface DownloadTicketProps {
   buyerName: string;
   eventName: string;
   eventDate: string;
+  eventTime?: string;
   eventVenue: string;
   ticketType: string;
   quantity: number;
@@ -37,7 +38,8 @@ export async function downloadTicketPDF(props: DownloadTicketProps) {
   doc.text(props.eventName, mg, 20);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${formatDate(props.eventDate)} at ${formatTime(props.eventDate)}`, mg, 30);
+  const timeStr = props.eventTime ? ` · ${props.eventTime}` : ` at ${formatTime(props.eventDate)}`
+  doc.text(`${formatDate(props.eventDate)}${timeStr}`, mg, 30);
   doc.text(props.eventVenue, mg, 38);
 
   const badgeX = pageW - mg - 50;

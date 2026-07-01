@@ -8,6 +8,7 @@ export interface TicketCardProps {
   buyerName: string;
   eventName: string;
   eventDate: string;
+  eventTime?: string;
   eventVenue: string;
   ticketType: string;
   quantity: number;
@@ -34,7 +35,7 @@ export default function TicketCard(props: TicketCardProps) {
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-bold leading-tight">{props.eventName}</h3>
             <p className="text-xs opacity-80 mt-1">
-              {formatDate(props.eventDate)} at {formatTime(props.eventDate)}
+              {formatDate(props.eventDate)}{props.eventTime ? ` · ${props.eventTime}` : ` at ${formatTime(props.eventDate)}`}
             </p>
             <p className="text-xs opacity-80">{props.eventVenue}</p>
           </div>
