@@ -4,6 +4,7 @@ import { fetchEvents, createBooking, uploadReceiptWithProgress, getOrderStatus, 
 import { formatPrice, formatDate } from '../utils/format';
 import type { EventType, FormData, BookingData, PaymentConfig } from '../types';
 import { Button } from '../components/ui/Button';
+import { captureEvent } from '../lib/analytics';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -169,6 +170,13 @@ export default function BookingPage() {
 
     setBooking(bookRes.data);
 
+    captureEvent('booking_created', {
+      order_id: bookRes.data.order_id,
+      ticket_type_id: form.ticketTypeId,
+      payment_method: form.paymentMethod,
+      quantity: form.quantity,
+    })
+
     const uploadRes = await uploadReceiptWithProgress(
       bookRes.data.order_id,
       selectedFile,
@@ -178,6 +186,9 @@ export default function BookingPage() {
     setLoading(false);
 
     if (uploadRes.success) {
+      captureEvent('receipt_uploaded', {
+        order_id: bookRes.data.order_id,
+      })
       setStep(3);
       setCountdown(60);
     } else {
@@ -212,6 +223,10 @@ export default function BookingPage() {
     const res = await getOrderStatus(booking.order_id);
     if (res.success && res.data) {
       setStatusChecked(true);
+      captureEvent('payment_status_checked', {
+        order_id: booking.order_id,
+        status: res.data.payment_status,
+      })
       if (res.data.payment_status === 'approved') {
         setStatusResult('approved');
       } else {
@@ -284,6 +299,9 @@ export default function BookingPage() {
     const res = await verifyEmail(booking.order_id, code);
     setVerifyLoading(false);
     if (res.success) {
+      captureEvent('email_verified', {
+        order_id: booking.order_id,
+      })
       setStep(4);
     } else {
       setVerifyError(res.error || 'Verification failed');

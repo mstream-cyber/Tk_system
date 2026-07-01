@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Spinner } from '../components/ui/Spinner';
 import type { TicketOrder } from '../types';
 import msLogo from '../assets/mslogo.png';
+import { captureEvent } from '../lib/analytics';
 
 export default function TicketPage() {
   const { ticket_id } = useParams<{ ticket_id: string }>();
@@ -20,6 +21,11 @@ export default function TicketPage() {
     fetchTicket(ticket_id).then((res) => {
       if (res.success && res.data) {
         setOrder(res.data);
+        captureEvent('ticket_viewed', {
+          ticket_id: res.data.ticket_id,
+          payment_status: res.data.payment_status,
+          email_verified: res.data.email_verified,
+        })
       } else {
         setNotFound(true);
       }

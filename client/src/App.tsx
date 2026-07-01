@@ -1,8 +1,9 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './hooks/useToast';
 import { Spinner } from './components/ui/Spinner';
+import { initAnalytics, captureEvent } from './lib/analytics';
 
 const BookingPage = lazy(() => import('./pages/BookingPage'));
 const TicketPage = lazy(() => import('./pages/TicketPage'));
@@ -20,11 +21,22 @@ function RouteFallback() {
   );
 }
 
+function PageViewTracker() {
+  const location = useLocation()
+  useEffect(() => {
+    captureEvent('$pageview', { url: location.pathname + location.search })
+  }, [location])
+  return null
+}
+
 export default function App() {
+  useEffect(() => { initAnalytics() }, [])
+
   return (
     <ErrorBoundary>
       <ToastProvider>
         <BrowserRouter>
+          <PageViewTracker />
           <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/" element={<BookingPage />} />
