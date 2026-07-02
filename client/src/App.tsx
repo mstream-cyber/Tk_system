@@ -4,6 +4,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './hooks/useToast';
 import { Spinner } from './components/ui/Spinner';
 import { initAnalytics, captureEvent } from './lib/analytics';
+import { Analytics } from '@vercel/analytics/react';
 
 const BookingPage = lazy(() => import('./pages/BookingPage'));
 const TicketPage = lazy(() => import('./pages/TicketPage'));
@@ -37,6 +38,7 @@ export default function App() {
       <ToastProvider>
         <BrowserRouter>
           <PageViewTracker />
+          <Analytics />
           <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/" element={<BookingPage />} />
