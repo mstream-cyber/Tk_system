@@ -5,7 +5,8 @@ import rateLimit from 'express-rate-limit';
 import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
 import { MS } from '../lib/constants';
-import { sendVerificationEmail } from '../services/email';
+import { sendVerificationEmail, sendTicketEmail } from '../services/email';
+import type { Order } from '../services/email';
 
 const router = Router();
 
@@ -92,6 +93,29 @@ router.post('/:order_id', [
       verification_code_hash: null,
     })
     .eq('id', order_id);
+
+  const { data: fullOrder } = await supabase
+    .from('orders')
+    .select('*, ticket_types(name, price, events(name, date, time, venue, city, organizer_phone, location_link, terms_conditions))')
+    .eq('id', order_id)
+    .single();
+
+  if (fullOrder && fullOrder.payment_status === 'approved') {
+    const emailOrder: Order = {
+      id: fullOrder.id,
+      ticket_id: fullOrder.ticket_id,
+      scan_token: fullOrder.scan_token,
+      buyer_name: fullOrder.buyer_name,
+      buyer_email: fullOrder.buyer_email,
+      quantity: fullOrder.quantity,
+      total_amount: fullOrder.total_amount,
+      payment_method: fullOrder.payment_method,
+      ticket_types: fullOrder.ticket_types,
+    };
+    sendTicketEmail(emailOrder).catch((err) =>
+      console.error(`Failed to send ticket email after verification for order ${fullOrder.id}:`, err)
+    );
+  }
 
   res.json(success({ message: 'Email verified successfully' }));
 });

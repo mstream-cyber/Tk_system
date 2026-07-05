@@ -4,8 +4,7 @@ import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
 import { generateTicketId } from '../utils/ticketId';
 import { generateScanToken } from '../utils/scanToken';
-import { sendNewOrderNotification, sendTicketEmail } from '../services/email';
-import type { Order } from '../services/email';
+import { sendNewOrderNotification } from '../services/email';
 
 const router = Router();
 
@@ -90,21 +89,6 @@ router.post('/', validate, async (req: Request, res: Response) => {
     await supabase.from('orders').delete().eq('id', order.id);
     res.status(409).json(error('Inventory changed, please retry'));
     return;
-  }
-
-  if (isPayOnGate) {
-    const emailOrder: Order = {
-      id: order.id,
-      ticket_id: order.ticket_id,
-      scan_token: order.scan_token,
-      buyer_name: order.buyer_name,
-      buyer_email: order.buyer_email,
-      quantity: order.quantity,
-      total_amount: order.total_amount,
-      payment_method: 'pay_on_gate',
-      ticket_types: ticketType,
-    };
-    sendTicketEmail(emailOrder).catch((err) => console.error(`Failed to send ticket email for pay-on-gate order ${order.id}:`, err));
   }
 
   const notifyTo = process.env.NOTIFY_EMAIL
