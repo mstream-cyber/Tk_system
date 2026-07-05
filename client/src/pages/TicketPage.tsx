@@ -111,6 +111,7 @@ export default function TicketPage() {
             ticketType={order.ticket_types?.name || 'Ticket'}
             quantity={order.quantity}
             totalPaid={order.total_amount}
+            paymentMethod={order.payment_method}
           />
           <Button
             onClick={() => downloadTicketPDF({
@@ -124,6 +125,7 @@ export default function TicketPage() {
               ticketType: order.ticket_types?.name || 'Ticket',
               quantity: order.quantity,
               totalPaid: order.total_amount,
+              paymentMethod: order.payment_method,
             })}
             className="mt-4 w-full"
             size="lg"

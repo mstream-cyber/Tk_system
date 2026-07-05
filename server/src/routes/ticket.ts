@@ -11,7 +11,7 @@ router.get('/:ticket_id', async (req, res) => {
   const { data, error: dbError } = await supabase
     .from('orders')
     .select(`
-      id, ticket_id, buyer_name, buyer_email, buyer_phone, quantity, total_amount, payment_status, email_verified, created_at, scan_token,
+      id, ticket_id, buyer_name, buyer_email, buyer_phone, quantity, total_amount, payment_method, payment_status, paid, email_verified, created_at, scan_token,
       ticket_types(id, name, price, events(id, name, date, venue, city, time, poster_url, organizer_phone, location_link, terms_conditions))
     `)
     .eq('ticket_id', ticket_id)

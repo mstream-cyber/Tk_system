@@ -92,6 +92,7 @@ export async function generateTicketPDF(order: Order, qrBase64: string): Promise
   const timeStr = event?.time || (event?.date ? formatTime(event.date) : '');
   const venue = event?.venue || '—';
   const city = event?.city || '';
+  const isPayOnGate = order.payment_method === 'pay_on_gate';
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = 210;
@@ -117,6 +118,15 @@ export async function generateTicketPDF(order: Order, qrBase64: string): Promise
   else doc.text(dateStr, mg, 30);
   doc.text(`${venue}${city ? `, ${city}` : ''}`, mg, 38);
 
+  if (isPayOnGate) {
+    doc.setFillColor(245, 158, 11);
+    doc.rect(0, 47, pageW, 12, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('UNPAID — Pay at Gate', pageW / 2, 55, { align: 'center' });
+  }
+
   const badgeW = 50;
   const badgeX = pageW - mg - badgeW;
   const badgeY = 12;
@@ -140,9 +150,10 @@ export async function generateTicketPDF(order: Order, qrBase64: string): Promise
   const col1X = mg;
   const col2X = pageW / 2 + 5;
 
+  const paidLabel = isPayOnGate ? 'Pay at Gate' : formatPkr(order.total_amount);
   const details: [string, string][] = [
     ['Buyer Name', order.buyer_name], ['Ticket ID', order.ticket_id],
-    ['Quantity', String(order.quantity)], ['Total Paid', formatPkr(order.total_amount)],
+    ['Quantity', String(order.quantity)], ['Total Paid', paidLabel],
     ['Date', `${dateStr}${timeStr ? ` ${timeStr}` : ''}`],
     ['Venue', `${venue}${city ? `, ${city}` : ''}`],
   ];
@@ -200,6 +211,7 @@ function buildApprovalHtml(order: Order, qrBase64: string): string {
   const venue = escapeHtml(event?.venue || '—');
   const city = escapeHtml(event?.city || '');
   const ticketType = escapeHtml(order.ticket_types?.name || 'Ticket');
+  const isPayOnGate = order.payment_method === 'pay_on_gate';
   const organizerPhone = order.ticket_types?.events?.organizer_phone;
   const locationLink = order.ticket_types?.events?.location_link;
   const termsConditions = order.ticket_types?.events?.terms_conditions;
@@ -227,9 +239,14 @@ function buildApprovalHtml(order: Order, qrBase64: string): string {
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Ticket Type</td><td style="padding:6px 12px;font-size:14px;color:#222;">${ticketType}</td></tr>
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Ticket ID</td><td style="padding:6px 12px;font-size:14px;color:#222;font-family:monospace;">${order.ticket_id}</td></tr>
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Qty</td><td style="padding:6px 12px;font-size:14px;color:#222;">${order.quantity}</td></tr>
-    <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Total Paid</td><td style="padding:6px 12px;font-size:14px;color:#222;font-weight:bold;">${formatPkr(order.total_amount)}</td></tr>
+    <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Total Paid</td><td style="padding:6px 12px;font-size:14px;color:#222;font-weight:bold;">${isPayOnGate ? 'Pay at Gate' : formatPkr(order.total_amount)}</td></tr>
     ${organizerPhone ? `<tr><td style="padding:6px 12px;font-size:13px;color:#888;">Questions?</td><td style="padding:6px 12px;font-size:14px;color:#222;">${escapeHtml(organizerPhone)}</td></tr>` : ''}
   </table>
+  ${isPayOnGate ? `
+  <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:12px 16px;margin:20px 0;text-align:center;">
+    <p style="margin:0;font-size:13px;color:#92400e;font-weight:bold;">Unpaid — Pay at Gate</p>
+    <p style="margin:4px 0 0;font-size:13px;color:#78350f;">Please pay at the venue entrance before entry.</p>
+  </div>` : ''}
   ${termsConditions ? `
   <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:20px 0;">
     <p style="margin:0 0 6px;font-size:12px;color:#92400e;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">Terms &amp; Conditions</p>

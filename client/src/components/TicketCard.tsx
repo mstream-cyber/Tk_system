@@ -13,10 +13,13 @@ export interface TicketCardProps {
   ticketType: string;
   quantity: number;
   totalPaid: number;
+  paymentMethod?: string;
+  paid?: boolean;
 }
 
 export default function TicketCard(props: TicketCardProps) {
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const isPayOnGate = props.paymentMethod === 'pay_on_gate';
 
   useEffect(() => {
     QRCode.toDataURL(props.scanToken, {
@@ -45,6 +48,14 @@ export default function TicketCard(props: TicketCardProps) {
         </div>
       </div>
 
+      {isPayOnGate && (
+        <div className="bg-warning px-5 py-2.5">
+          <p className="text-white text-xs font-bold text-center uppercase tracking-wider">
+            Unpaid — Pay at Gate
+          </p>
+        </div>
+      )}
+
       <div className="bg-[#1a1a2e]">
         <div className="flex justify-between px-3 py-1">
           {Array.from({ length: 24 }).map((_, i) => (
@@ -69,7 +80,7 @@ export default function TicketCard(props: TicketCardProps) {
           </div>
           <div>
             <p className="text-content-muted text-xs font-semibold uppercase tracking-wide">Paid</p>
-            <p className="text-white font-medium">{formatPrice(props.totalPaid)}</p>
+            <p className="text-white font-medium">{isPayOnGate ? '—' : formatPrice(props.totalPaid)}</p>
           </div>
         </div>
 

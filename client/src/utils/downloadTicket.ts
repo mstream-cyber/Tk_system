@@ -13,6 +13,7 @@ export interface DownloadTicketProps {
   ticketType: string;
   quantity: number;
   totalPaid: number;
+  paymentMethod?: string;
 }
 
 export async function downloadTicketPDF(props: DownloadTicketProps) {
@@ -42,6 +43,17 @@ export async function downloadTicketPDF(props: DownloadTicketProps) {
   doc.text(`${formatDate(props.eventDate)}${timeStr}`, mg, 30);
   doc.text(props.eventVenue, mg, 38);
 
+  const isPayOnGate = props.paymentMethod === 'pay_on_gate';
+
+  if (isPayOnGate) {
+    doc.setFillColor(245, 158, 11);
+    doc.rect(0, 47, pageW, 12, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('UNPAID — Pay at Gate', pageW / 2, 55, { align: 'center' });
+  }
+
   const badgeX = pageW - mg - 50;
   doc.setFillColor(255, 255, 255);
   doc.roundedRect(badgeX, 12, 50, 24, 4, 4, 'FD');
@@ -56,7 +68,7 @@ export async function downloadTicketPDF(props: DownloadTicketProps) {
     ['Buyer Name', props.buyerName],
     ['Ticket ID', props.ticketId],
     ['Quantity', String(props.quantity)],
-    ['Total Paid', formatPrice(props.totalPaid)],
+    ['Total Paid', isPayOnGate ? 'Pay at Gate' : formatPrice(props.totalPaid)],
     ['Date', formatDate(props.eventDate)],
     ['Venue', props.eventVenue],
   ];
