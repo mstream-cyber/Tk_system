@@ -105,5 +105,5 @@ export interface FormData {
   buyerPhone: string;
   buyerCity: string;
   quantity: number;
-  paymentMethod: 'bank_transfer' | 'easypaisa' | '';
+  paymentMethod: 'bank_transfer' | 'easypaisa' | 'pay_on_gate' | '';
 }

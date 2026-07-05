@@ -146,7 +146,8 @@ export default function BookingPage() {
   }, [filePreview]);
 
   const handleSubmit = useCallback(async () => {
-    if (!selectedTicket || !form.paymentMethod || !selectedFile) return;
+    const isPayOnGate = form.paymentMethod === 'pay_on_gate';
+    if (!selectedTicket || !form.paymentMethod || (!isPayOnGate && !selectedFile)) return;
     setLoading(true);
     setUploadProgress(0);
     setUploadFailed(false);
@@ -177,9 +178,16 @@ export default function BookingPage() {
       quantity: form.quantity,
     })
 
+    if (isPayOnGate) {
+      setLoading(false);
+      setStep(3);
+      setCountdown(60);
+      return;
+    }
+
     const uploadRes = await uploadReceiptWithProgress(
       bookRes.data.order_id,
-      selectedFile,
+      selectedFile!,
       (pct) => setUploadProgress(pct)
     );
 
@@ -270,6 +278,13 @@ export default function BookingPage() {
     const id = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
     return () => clearInterval(id);
   }, [countdown]);
+
+  useEffect(() => {
+    if (step === 4 && !statusChecked && form.paymentMethod === 'pay_on_gate') {
+      setStatusChecked(true);
+      setStatusResult('approved');
+    }
+  }, [step, form.paymentMethod, statusChecked]);
 
   useEffect(() => {
     if (step !== 3 || !booking) return;
@@ -489,7 +504,10 @@ export default function BookingPage() {
     </div>
   );
 
-  const renderStep2 = () => (
+  const renderStep2 = () => {
+    const isPayOnGate = form.paymentMethod === 'pay_on_gate';
+
+    return (
     <div>
       <div className="bg-gradient-to-r from-accent to-indigo-800 text-white rounded-xl p-5 mb-6 text-center">
         <p className="text-sm opacity-80 mb-1">Amount to Pay</p>
@@ -534,15 +552,35 @@ export default function BookingPage() {
             </div>
           )}
         </button>
+
+        <button type="button" onClick={() => { handleChange('paymentMethod', 'pay_on_gate'); setSelectedFile(null); setFilePreview(null); setUploadFailed(false); }}
+          className={`p-4 rounded-xl border-2 text-left transition-all ${isPayOnGate ? 'border-accent bg-card shadow-sm' : 'border-border bg-card hover:border-accent'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl">🚪</span>
+            <span className="font-semibold text-content text-sm">Pay at Gate</span>
+            <div className={`ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center ${isPayOnGate ? 'border-accent' : 'border-border'}`}>
+              {isPayOnGate && <div className="w-2.5 h-2.5 rounded-full bg-accent" />}
+            </div>
+          </div>
+          <div className="mt-2 pt-2 border-t border-border space-y-1 text-xs text-content-muted">
+            <p>Pay at the venue entrance</p>
+          </div>
+        </button>
       </div>
 
-      {form.paymentMethod && (
+      {form.paymentMethod && !isPayOnGate && (
         <div className="mb-5 p-4 bg-warning-subtle border border-warning rounded-xl">
           <p className="text-sm text-warning-light font-medium">Transfer exactly {formatPrice(liveTotal)} to your chosen account. Then upload your payment receipt below.</p>
         </div>
       )}
 
-      {form.paymentMethod && (
+      {isPayOnGate && (
+        <div className="mb-5 p-4 bg-accent-subtle border border-accent rounded-xl">
+          <p className="text-sm text-accent-light font-medium">Your ticket will be issued immediately. Pay at the venue entrance on the event day.</p>
+        </div>
+      )}
+
+      {form.paymentMethod && !isPayOnGate && (
         <div className="mb-5">
           <label className="block text-sm font-semibold text-content-secondary mb-2">Upload Payment Receipt</label>
           <input type="file" accept="image/jpeg,image/png,application/pdf" onChange={handleFileChange}
@@ -565,18 +603,19 @@ export default function BookingPage() {
 
       <div className="flex gap-3 mt-6">
         <Button variant="secondary" onClick={() => setStep(1)} className="flex-1">Back</Button>
-        {uploadFailed ? (
+        {uploadFailed && !isPayOnGate ? (
           <Button variant="danger" onClick={handleRetry} disabled={loading} loading={loading} className="flex-[2]">
             {loading ? 'Retrying...' : 'Retry Upload'}
           </Button>
         ) : (
-          <Button onClick={handleSubmit} disabled={loading || !form.paymentMethod || !selectedFile || !!errors.file} loading={loading} className="flex-[2]">
-            {loading ? (uploadProgress > 0 ? `Uploading ${uploadProgress}%...` : 'Submitting...') : 'Submit for Approval'}
+          <Button onClick={handleSubmit} disabled={loading || !form.paymentMethod || (!isPayOnGate && (!selectedFile || !!errors.file))} loading={loading} className="flex-[2]">
+            {loading ? (uploadProgress > 0 ? `Uploading ${uploadProgress}%...` : 'Submitting...') : isPayOnGate ? 'Submit Booking' : 'Submit for Approval'}
           </Button>
         )}
       </div>
     </div>
   );
+  };
 
   const renderStep3 = () => {
     return (

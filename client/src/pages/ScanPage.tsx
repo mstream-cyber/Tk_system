@@ -16,6 +16,8 @@ type ResultData = {
   ticketId?: string;
   scannedAt?: string;
   errorMessage?: string;
+  paid?: boolean;
+  receiptUrl?: string;
 };
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -129,6 +131,7 @@ export default function ScanPage() {
         });
         setState('already_used');
       } else if (res.ok && data.success) {
+        const paid = data.data?.paid !== false;
         setResult({
           buyerName: data.data?.buyer_name || '',
           ticketType: data.data?.ticket_type || '',
@@ -137,6 +140,8 @@ export default function ScanPage() {
           eventDate: data.data?.event_date || '',
           venue: data.data?.venue || '',
           ticketId: data.data?.ticket_id || '',
+          paid,
+          receiptUrl: data.data?.receipt_url || undefined,
         });
         setState('valid');
       } else {
@@ -204,6 +209,33 @@ export default function ScanPage() {
     }
   }, [scannerToken, resetPassword]);
 
+  const handleMarkPaid = useCallback(async () => {
+    const token = currentScanTokenRef.current;
+    if (!token) return;
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (scannerToken) {
+        headers['Authorization'] = `Bearer ${scannerToken}`;
+      }
+      const res = await fetch('/api/ticket/mark-paid', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ token }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setResult((prev) => ({ ...prev, paid: true }));
+      } else {
+        setResult((prev) => ({ ...prev, errorMessage: data.error || 'Failed to mark as paid' }));
+        setState('invalid');
+      }
+    } catch {
+      setResult((prev) => ({ ...prev, errorMessage: 'Network error. Try again.' }));
+      setState('invalid');
+    }
+  }, [scannerToken]);
+
   const formatTimestamp = (iso: string, withTime = true) => {
     const d = new Date(iso);
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -257,12 +289,14 @@ export default function ScanPage() {
   }
 
   if (state === 'valid') {
+    const isPaid = result.paid !== false;
+
     return (
       <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-sm bg-card rounded-2xl border border-border overflow-hidden">
-          <div className="bg-success px-6 py-5 text-center">
-            <CheckIcon className="text-white mx-auto mb-1" size={40} />
-            <h1 className="text-white font-bold text-3xl tracking-wider">VALID</h1>
+          <div className={`px-6 py-5 text-center ${isPaid ? 'bg-success' : 'bg-warning'}`}>
+            {isPaid ? <CheckIcon className="text-white mx-auto mb-1" size={40} /> : <CloseIcon className="text-white mx-auto mb-1" size={40} />}
+            <h1 className="text-white font-bold text-3xl tracking-wider">{isPaid ? 'VALID' : 'UNPAID'}</h1>
           </div>
           <div className="p-5">
             {result.eventName && (
@@ -276,6 +310,20 @@ export default function ScanPage() {
               {result.venue && <DetailRow label="Venue" value={result.venue} />}
               {result.ticketId && <DetailRow label="Ticket ID" value={result.ticketId} />}
             </div>
+            {isPaid && result.receiptUrl && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <p className="text-xs text-content-muted font-semibold uppercase tracking-wide mb-2">Receipt</p>
+                <a href={result.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-accent-light text-sm font-medium hover:underline">View Receipt</a>
+              </div>
+            )}
+            {!isPaid && (
+              <div className="mt-4 pt-4 border-t border-border">
+                <p className="text-xs text-content-muted text-center mb-3">Collect payment at the gate</p>
+                <Button onClick={handleMarkPaid} className="w-full" size="md">
+                  Mark as Paid
+                </Button>
+              </div>
+            )}
           </div>
         </div>
         <Button onClick={resetToScanning} className="mt-6" size="lg">

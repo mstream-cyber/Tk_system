@@ -101,6 +101,8 @@ router.post('/scan', requireRole('admin', 'scanner'), async (req, res) => {
       buyer_name,
       quantity,
       payment_status,
+      paid,
+      receipt_url,
       scanned_at,
       ticket_types (
         name,
@@ -140,6 +142,14 @@ router.post('/scan', requireRole('admin', 'scanner'), async (req, res) => {
     return;
   }
 
+  let receiptUrl: string | null = null;
+  if (order.paid && order.receipt_url) {
+    const { data: signed } = await supabase.storage
+      .from('payment-receipts')
+      .createSignedUrl(order.receipt_url, 3600);
+    if (signed) receiptUrl = signed.signedUrl;
+  }
+
   res.json({
     success: true,
     data: {
@@ -150,9 +160,50 @@ router.post('/scan', requireRole('admin', 'scanner'), async (req, res) => {
       event_name: order.ticket_types?.[0]?.events?.[0]?.name,
       event_date: order.ticket_types?.[0]?.events?.[0]?.date,
       venue: order.ticket_types?.[0]?.events?.[0]?.venue,
+      paid: order.paid,
+      receipt_url: receiptUrl,
       scanned_at: now,
     },
   });
+});
+
+router.post('/mark-paid', requireRole('admin', 'scanner'), async (req, res) => {
+  const { token } = req.body;
+
+  if (!token || typeof token !== 'string') {
+    res.status(400).json(error('Token is required'));
+    return;
+  }
+
+  const { data: order, error: fetchErr } = await supabase
+    .from('orders')
+    .select('id, paid')
+    .eq('scan_token', token)
+    .single();
+
+  if (fetchErr || !order) {
+    res.status(404).json(error('Ticket not found'));
+    return;
+  }
+
+  if (order.paid) {
+    res.status(400).json(error('Ticket is already paid'));
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const { error: updateErr } = await supabase
+    .from('orders')
+    .update({ paid: true, paid_at: now })
+    .eq('id', order.id);
+
+  if (updateErr) {
+    console.error('Failed to mark ticket as paid:', updateErr);
+    res.status(500).json(error('Failed to mark ticket as paid'));
+    return;
+  }
+
+  res.json(success({ message: 'Ticket marked as paid', paid_at: now }));
 });
 
 router.post('/reset-scan', requireRole('admin', 'scanner'), async (req, res) => {

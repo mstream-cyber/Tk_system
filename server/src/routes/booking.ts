@@ -4,7 +4,8 @@ import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
 import { generateTicketId } from '../utils/ticketId';
 import { generateScanToken } from '../utils/scanToken';
-import { sendNewOrderNotification } from '../services/email';
+import { sendNewOrderNotification, sendTicketEmail } from '../services/email';
+import type { Order } from '../services/email';
 
 const router = Router();
 
@@ -16,8 +17,8 @@ const validate = [
   body('buyer_city').optional().trim().isLength({ max: 100 }).withMessage('buyer_city too long'),
   body('quantity').isInt({ min: 1, max: 10 }).withMessage('quantity must be between 1 and 10'),
   body('payment_method')
-    .isIn(['bank_transfer', 'easypaisa'])
-    .withMessage('payment_method must be bank_transfer or easypaisa'),
+    .isIn(['bank_transfer', 'easypaisa', 'pay_on_gate'])
+    .withMessage('payment_method must be bank_transfer, easypaisa, or pay_on_gate'),
 ];
 
 router.post('/', validate, async (req: Request, res: Response) => {
@@ -48,6 +49,9 @@ router.post('/', validate, async (req: Request, res: Response) => {
   const ticket_id = generateTicketId();
   const total_amount = ticketType.price * quantity;
 
+  const isPayOnGate = payment_method === 'pay_on_gate';
+  const now = new Date().toISOString();
+
   const { data: order, error: insertErr } = await supabase
     .from('orders')
     .insert({
@@ -59,7 +63,9 @@ router.post('/', validate, async (req: Request, res: Response) => {
       quantity,
       total_amount,
       payment_method,
-      payment_status: 'pending',
+      payment_status: isPayOnGate ? 'approved' : 'pending',
+      paid: isPayOnGate ? false : true,
+      approved_at: isPayOnGate ? now : null,
       scan_token: generateScanToken(),
       ticket_id,
     })
@@ -84,6 +90,21 @@ router.post('/', validate, async (req: Request, res: Response) => {
     await supabase.from('orders').delete().eq('id', order.id);
     res.status(409).json(error('Inventory changed, please retry'));
     return;
+  }
+
+  if (isPayOnGate) {
+    const emailOrder: Order = {
+      id: order.id,
+      ticket_id: order.ticket_id,
+      scan_token: order.scan_token,
+      buyer_name: order.buyer_name,
+      buyer_email: order.buyer_email,
+      quantity: order.quantity,
+      total_amount: order.total_amount,
+      payment_method: 'pay_on_gate',
+      ticket_types: ticketType,
+    };
+    sendTicketEmail(emailOrder).catch((err) => console.error(`Failed to send ticket email for pay-on-gate order ${order.id}:`, err));
   }
 
   const notifyTo = process.env.NOTIFY_EMAIL
