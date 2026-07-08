@@ -6,7 +6,7 @@ import { success, error } from '../utils/response';
 import { requireRole, generateToken } from '../middleware/auth';
 import type { AuthRequest } from '../middleware/auth';
 import { MS } from '../lib/constants';
-import { sendTicketEmail, sendRejectionEmail, sendNewOrderNotification } from '../services/email';
+import { sendTicketEmail, sendRejectionEmail, sendNewOrderNotification, sendInviteNotification } from '../services/email';
 import { generateTicketId } from '../utils/ticketId';
 import { generateScanToken } from '../utils/scanToken';
 import type { Order } from '../services/email';
@@ -45,6 +45,51 @@ router.post('/login', loginLimiter, (req: Request, res: Response) => {
     path: '/',
   });
   res.json(success({ message: 'Login successful' }));
+});
+
+router.patch('/restore-quantity', async (req: Request, res: Response) => {
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  const headerPassword = req.headers['x-admin-password'];
+
+  if (!adminPassword || !headerPassword || headerPassword !== adminPassword) {
+    res.status(401).json(error('Invalid admin password'));
+    return;
+  }
+
+  const { ticket_type_id, adjustment } = req.body;
+  if (!ticket_type_id || typeof adjustment !== 'number' || adjustment < 1) {
+    res.status(400).json(error('ticket_type_id (uuid) and adjustment (positive number) are required'));
+    return;
+  }
+
+  const { data: ticketType, error: fetchErr } = await supabase
+    .from('ticket_types')
+    .select('id, available_quantity, total_quantity')
+    .eq('id', ticket_type_id)
+    .single();
+
+  if (fetchErr || !ticketType) {
+    res.status(404).json(error('Ticket type not found'));
+    return;
+  }
+
+  const newAvailable = Math.min(ticketType.available_quantity + adjustment, ticketType.total_quantity);
+  const { error: updateErr } = await supabase
+    .from('ticket_types')
+    .update({ available_quantity: newAvailable })
+    .eq('id', ticket_type_id);
+
+  if (updateErr) {
+    res.status(500).json(error('Failed to update quantity'));
+    return;
+  }
+
+  res.json(success({
+    ticket_type_id,
+    previous_available: ticketType.available_quantity,
+    new_available: newAvailable,
+    total: ticketType.total_quantity,
+  }));
 });
 
 router.use(requireRole('admin'));
@@ -126,6 +171,95 @@ router.get('/stats', async (_req: Request, res: Response) => {
     return;
   }
   res.json(success(statsResult));
+});
+
+router.post('/invites', async (req: AuthRequest, res: Response) => {
+  const { ticket_type_id, buyer_name, buyer_email } = req.body;
+  if (!ticket_type_id || !buyer_name || !buyer_email) {
+    res.status(400).json(error('ticket_type_id, buyer_name, and buyer_email are required'));
+    return;
+  }
+
+  const { data: ticketType, error: fetchErr } = await supabase
+    .from('ticket_types')
+    .select('*, events!inner(name)')
+    .eq('id', ticket_type_id)
+    .single();
+
+  if (fetchErr || !ticketType) {
+    res.status(404).json(error('Ticket type not found'));
+    return;
+  }
+
+  if (ticketType.available_quantity < 1) {
+    res.status(400).json(error('No tickets available'));
+    return;
+  }
+
+  const ticket_id = generateTicketId();
+  const { data: order, error: insertErr } = await supabase
+    .from('orders')
+    .insert({
+      ticket_type_id,
+      buyer_name: buyer_name.trim(),
+      buyer_email: buyer_email.trim(),
+      buyer_phone: '-',
+      quantity: 1,
+      total_amount: 0,
+      payment_method: 'invite',
+      payment_status: 'approved',
+      approved_at: new Date().toISOString(),
+      approved_by: req.admin?.role || 'admin',
+      scan_token: generateScanToken(),
+      ticket_id,
+    })
+    .select()
+    .single();
+
+  if (insertErr || !order) {
+    res.status(500).json(error('Failed to create invite'));
+    return;
+  }
+
+  const newAvailable = ticketType.available_quantity - 1;
+  const { error: decErr } = await supabase.from('ticket_types').update({ available_quantity: newAvailable }).eq('id', ticket_type_id);
+  if (decErr) {
+    console.error(`Failed to decrement inventory for invite ${order.id}:`, decErr.message || 'Unknown error');
+  }
+
+  sendInviteNotification({
+    buyer_name: order.buyer_name,
+    buyer_email: order.buyer_email,
+    ticket_id: order.ticket_id,
+    event_name: ticketType.events?.name || 'Event',
+    ticket_type: ticketType.name,
+  }).catch((err: unknown) => console.error('Failed to send invite notification:', err));
+
+  res.status(201).json(success({
+    order_id: order.id,
+    ticket_id: order.ticket_id,
+    buyer_name: order.buyer_name,
+    buyer_email: order.buyer_email,
+    event_name: ticketType.events?.name,
+    ticket_type: ticketType.name,
+  }));
+});
+
+router.get('/invites', async (req: Request, res: Response) => {
+  const eventId = req.query.event_id as string;
+  let query = supabase
+    .from('orders')
+    .select(`*, ticket_types ( id, name, price, events ( id, name, date, venue, city ) )`)
+    .eq('payment_method', 'invite')
+    .order('created_at', { ascending: false });
+
+  if (eventId) {
+    query = query.eq('ticket_types.event_id', eventId);
+  }
+
+  const { data: invites, error: fetchErr } = await query;
+  if (fetchErr) { res.status(500).json(error('Failed to fetch invites')); return; }
+  res.json(success(invites || []));
 });
 
 router.post('/verify-scan-pin', scanPinLimiter, (req: Request, res: Response) => {

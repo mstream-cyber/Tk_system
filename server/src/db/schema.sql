@@ -34,6 +34,7 @@ CREATE TABLE ticket_types (
   status TEXT DEFAULT 'active'
     CHECK (status IN ('active', 'paused', 'sold_out')),
   sort_order INTEGER DEFAULT 0,
+  color TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -49,7 +50,7 @@ CREATE TABLE orders (
   buyer_city TEXT,
   quantity INTEGER NOT NULL DEFAULT 1,
   total_amount INTEGER NOT NULL,
-  payment_method TEXT CHECK (payment_method IN ('bank_transfer', 'easypaisa', 'pay_on_gate')),
+  payment_method TEXT CHECK (payment_method IN ('bank_transfer', 'easypaisa', 'pay_on_gate', 'invite')),
   payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN ('pending', 'receipt_uploaded', 'approved', 'rejected')),
   receipt_url TEXT,
   receipt_uploaded_at TIMESTAMPTZ,

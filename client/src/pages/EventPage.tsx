@@ -115,9 +115,15 @@ export default function EventPage() {
                 <button
                   key={tt.id}
                   onClick={() => navigate(`/?eventId=${event.id}`)}
-                  className="bg-card rounded-xl border border-border p-4 text-left hover:border-accent transition-all hover:shadow-lg"
+                  className="bg-card rounded-xl border border-border p-4 text-left hover:border-accent transition-all hover:shadow-lg relative overflow-hidden"
                 >
-                  <div className="font-semibold text-content text-sm">{tt.name}</div>
+                  {tt.color && (
+                    <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: tt.color }} />
+                  )}
+                  <div className="flex items-center gap-2">
+                    {tt.color && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tt.color }} />}
+                    <div className="font-semibold text-content text-sm">{tt.name}</div>
+                  </div>
                   <div className="text-accent-light font-bold text-lg mt-1">{formatPrice(tt.price)}</div>
                   <div className="text-content-muted text-xs mt-1">
                     {tt.available_quantity > 10

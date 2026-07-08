@@ -20,6 +20,7 @@ export interface TicketCardProps {
 export default function TicketCard(props: TicketCardProps) {
   const [qrDataUrl, setQrDataUrl] = useState('');
   const isPayOnGate = props.paymentMethod === 'pay_on_gate';
+  const isInvite = props.paymentMethod === 'invite';
 
   useEffect(() => {
     QRCode.toDataURL(props.scanToken, {
@@ -80,7 +81,7 @@ export default function TicketCard(props: TicketCardProps) {
           </div>
           <div>
             <p className="text-content-muted text-xs font-semibold uppercase tracking-wide">Paid</p>
-            <p className="text-white font-medium">{isPayOnGate ? '—' : formatPrice(props.totalPaid)}</p>
+            <p className="text-white font-medium">{isPayOnGate ? '—' : isInvite ? 'Free (Invite)' : formatPrice(props.totalPaid)}</p>
           </div>
         </div>
 

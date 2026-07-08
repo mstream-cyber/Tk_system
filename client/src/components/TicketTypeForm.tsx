@@ -13,6 +13,7 @@ interface TicketTypeFormTicketType {
   description: string | null;
   status: 'active' | 'paused' | 'sold_out';
   sort_order: number;
+  color?: string;
   created_at: string;
 }
 

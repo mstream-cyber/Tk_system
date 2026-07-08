@@ -9,6 +9,9 @@ interface Stats {
   total_revenue_approved: number;
   gate_sales_count: number;
   online_sales_count: number;
+  pay_on_gate_count: number;
+  unpaid_count: number;
+  invite_count: number;
   gate_revenue: number;
   online_revenue: number;
 }
@@ -36,6 +39,7 @@ export function StatsBar({ stats }: StatsBarProps) {
       <StatCard label="Revenue" value={formatPrice(stats.total_revenue_approved)} color="text-accent-light" />
       <StatCard label="Gate sales" value={stats.gate_sales_count ?? 0} color="text-info-light" />
       <StatCard label="Online sales" value={stats.online_sales_count ?? 0} color="text-info" />
+      <StatCard label="Invites" value={stats.invite_count ?? 0} color="text-accent-light" />
     </div>
   );
 }

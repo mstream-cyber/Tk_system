@@ -209,6 +209,8 @@ export function OrdersTab({ apiFetch, onStatsRefresh }: OrdersTabProps) {
             { value: 'cash', label: 'Cash' },
             { value: 'bank_transfer', label: 'Bank Transfer' },
             { value: 'easypaisa', label: 'EasyPaisa' },
+            { value: 'pay_on_gate', label: 'Pay at Gate' },
+            { value: 'invite', label: 'Invite' },
           ]}
           placeholder="All"
         />

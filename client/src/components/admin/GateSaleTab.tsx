@@ -16,6 +16,7 @@ interface TicketTypeAdmin {
   description: string | null;
   status: string;
   sort_order: number;
+  color?: string;
 }
 
 interface EventAdmin {

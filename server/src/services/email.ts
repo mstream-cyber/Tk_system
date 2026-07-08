@@ -93,6 +93,7 @@ export async function generateTicketPDF(order: Order, qrBase64: string): Promise
   const venue = event?.venue || '—';
   const city = event?.city || '';
   const isPayOnGate = order.payment_method === 'pay_on_gate';
+  const isInvite = order.payment_method === 'invite';
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = 210;
@@ -150,7 +151,7 @@ export async function generateTicketPDF(order: Order, qrBase64: string): Promise
   const col1X = mg;
   const col2X = pageW / 2 + 5;
 
-  const paidLabel = isPayOnGate ? 'Pay at Gate' : formatPkr(order.total_amount);
+  const paidLabel = isPayOnGate ? 'Pay at Gate' : isInvite ? 'Free (Invite)' : formatPkr(order.total_amount);
   const details: [string, string][] = [
     ['Buyer Name', order.buyer_name], ['Ticket ID', order.ticket_id],
     ['Quantity', String(order.quantity)], ['Total Paid', paidLabel],
@@ -212,6 +213,7 @@ function buildApprovalHtml(order: Order, qrBase64: string): string {
   const city = escapeHtml(event?.city || '');
   const ticketType = escapeHtml(order.ticket_types?.name || 'Ticket');
   const isPayOnGate = order.payment_method === 'pay_on_gate';
+  const isInvite = order.payment_method === 'invite';
   const organizerPhone = order.ticket_types?.events?.organizer_phone;
   const locationLink = order.ticket_types?.events?.location_link;
   const termsConditions = order.ticket_types?.events?.terms_conditions;
@@ -239,7 +241,7 @@ function buildApprovalHtml(order: Order, qrBase64: string): string {
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Ticket Type</td><td style="padding:6px 12px;font-size:14px;color:#222;">${ticketType}</td></tr>
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Ticket ID</td><td style="padding:6px 12px;font-size:14px;color:#222;font-family:monospace;">${order.ticket_id}</td></tr>
     <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Qty</td><td style="padding:6px 12px;font-size:14px;color:#222;">${order.quantity}</td></tr>
-    <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Total Paid</td><td style="padding:6px 12px;font-size:14px;color:#222;font-weight:bold;">${isPayOnGate ? 'Pay at Gate' : formatPkr(order.total_amount)}</td></tr>
+    <tr><td style="padding:6px 12px;font-size:13px;color:#888;">Total Paid</td><td style="padding:6px 12px;font-size:14px;color:#222;font-weight:bold;">${isPayOnGate ? 'Pay at Gate' : isInvite ? 'Free (Invite)' : formatPkr(order.total_amount)}</td></tr>
     ${organizerPhone ? `<tr><td style="padding:6px 12px;font-size:13px;color:#888;">Questions?</td><td style="padding:6px 12px;font-size:14px;color:#222;">${escapeHtml(organizerPhone)}</td></tr>` : ''}
   </table>
   ${isPayOnGate ? `
@@ -458,6 +460,64 @@ export async function sendNewOrderNotification(params: {
     console.log(`Order notification sent for ${params.ticket_id}`)
   } catch (err) {
     console.error(`Failed to send order notification for ${params.ticket_id}:`, err)
+  }
+}
+
+export async function sendInviteNotification(params: {
+  buyer_name: string;
+  buyer_email: string;
+  ticket_id: string;
+  event_name: string;
+  ticket_type: string;
+}) {
+  const transport = getTransporter();
+  const ticketUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/ticket/${params.ticket_id}`;
+  const subject = `You're invited — ${params.event_name}`;
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f4f4f8;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:20px auto;background:#ffffff;border-radius:12px;overflow:hidden;">
+<tr><td style="background:#534AB7;padding:24px;text-align:center;">
+  <img src="${logoUrl()}" alt="Mawj stream" style="height:36px;width:auto;margin-bottom:12px;" />
+  <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;">You're Invited!</h1>
+  <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">${escapeHtml(params.event_name)}</p>
+</td></tr>
+<tr><td style="padding:24px;">
+  <p style="margin:0 0 16px;font-size:15px;color:#333;">Hi <strong>${escapeHtml(params.buyer_name)}</strong>,</p>
+  <p style="margin:0 0 20px;font-size:14px;color:#555;">You have been invited to <strong>${escapeHtml(params.event_name)}</strong> with a <strong>${escapeHtml(params.ticket_type)}</strong> ticket.</p>
+  <div style="text-align:center;margin:24px 0 12px;">
+    <a href="${ticketUrl}" style="display:inline-block;background:#534AB7;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:bold;">View Your Ticket</a>
+  </div>
+  <p style="margin:20px 0 0;font-size:13px;color:#888;">You will need to verify your email to access your ticket.</p>
+</td></tr>
+<tr><td style="background:#1a1a2e;padding:16px 24px;text-align:center;">
+  <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.5);">Mawj stream Ticket Portal</p>
+</td></tr>
+</table>
+</body>
+</html>`.trim();
+
+  const textBody = `Hi ${params.buyer_name},\n\nYou have been invited to ${params.event_name} with a ${params.ticket_type} ticket.\n\nView your ticket here: ${ticketUrl}\n\nYou will need to verify your email to access your ticket.`;
+
+  if (transport) {
+    try {
+      await transport.sendMail({
+        from: process.env.SMTP_FROM || 'noreply@globaltickets.com',
+        to: params.buyer_email,
+        subject,
+        html: htmlBody,
+        text: textBody,
+      });
+      console.log(`Invite notification sent to ${params.buyer_email} for ticket ${params.ticket_id}`);
+    } catch (err) {
+      console.error(`Failed to send invite notification for ${params.ticket_id}:`, err);
+    }
+  } else {
+    console.log(`[EMAIL STUB] Invite To: ${params.buyer_email}`);
+    console.log(`[EMAIL STUB] Subject: ${subject}`);
+    console.log(`[EMAIL STUB] Text: ${textBody}`);
   }
 }
 

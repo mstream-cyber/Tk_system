@@ -27,6 +27,7 @@ export interface TicketType {
   description: string | null;
   status: string;
   sort_order: number;
+  color?: string;
   created_at: string;
 }
 

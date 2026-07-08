@@ -454,8 +454,12 @@ export default function BookingPage() {
           const selected = form.ticketTypeId === tt.id;
           return (
             <button key={tt.id} type="button" disabled={soldOut} onClick={() => { handleChange('ticketTypeId', tt.id); if (form.quantity > Math.min(tt.available_quantity, 5)) handleChange('quantity', Math.min(tt.available_quantity, 5)); }}
-              className={`relative p-4 rounded-xl border-2 text-left transition-all ${soldOut ? 'border-border bg-surface-elevated opacity-60 cursor-not-allowed' : selected ? 'border-accent bg-card shadow-sm' : 'border-border bg-card hover:border-accent'}`}>
-              <div className="font-semibold text-content">{tt.name}</div>
+              className={`relative p-4 rounded-xl border-2 text-left transition-all overflow-hidden ${soldOut ? 'border-border bg-surface-elevated opacity-60 cursor-not-allowed' : selected ? 'border-accent bg-card shadow-sm' : 'border-border bg-card hover:border-accent'}`}>
+              {tt.color && <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: tt.color }} />}
+              <div className="flex items-center gap-2">
+                {tt.color && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tt.color }} />}
+                <div className="font-semibold text-content">{tt.name}</div>
+              </div>
               <div className="text-sm text-content-muted mt-1">{formatPrice(tt.price)}</div>
               {tt.description && (
                 <p className="text-xs text-content-placeholder mt-1">{tt.description}</p>

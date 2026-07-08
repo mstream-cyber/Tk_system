@@ -4,8 +4,8 @@ import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
+import { FILE, MS, TICKET_COLORS } from '../lib/constants';
 import { requireRole } from '../middleware/auth';
-import { FILE, MS } from '../lib/constants';
 
 const router = Router();
 router.use(requireRole('admin'));
@@ -307,6 +307,9 @@ router.post('/:event_id/ticket-types', ticketTypeValidation, async (req: Request
   const { event_id } = req.params;
   const { name, price, total_quantity, description, sort_order } = req.body;
 
+  const so = sort_order ?? 0;
+  const color = TICKET_COLORS[so % TICKET_COLORS.length];
+
   const { data: ticketType, error: insertErr } = await supabase
     .from('ticket_types')
     .insert({
@@ -317,7 +320,8 @@ router.post('/:event_id/ticket-types', ticketTypeValidation, async (req: Request
       available_quantity: total_quantity,
       status: 'active',
       description: description || null,
-      sort_order: sort_order ?? 0,
+      sort_order: so,
+      color,
     })
     .select()
     .single();
@@ -358,6 +362,10 @@ router.put('/:event_id/ticket-types/:type_id', updateTicketTypeValidation, async
   if (Object.keys(updates).length === 0) {
     res.status(400).json(error('No valid fields provided'));
     return;
+  }
+
+  if (updates.sort_order !== undefined) {
+    updates.color = TICKET_COLORS[Number(updates.sort_order) % TICKET_COLORS.length];
   }
 
   const { data: ticketType, error: updateErr } = await supabase

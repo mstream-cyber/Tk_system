@@ -44,6 +44,7 @@ export async function downloadTicketPDF(props: DownloadTicketProps) {
   doc.text(props.eventVenue, mg, 38);
 
   const isPayOnGate = props.paymentMethod === 'pay_on_gate';
+  const isInvite = props.paymentMethod === 'invite';
 
   if (isPayOnGate) {
     doc.setFillColor(245, 158, 11);
@@ -68,7 +69,7 @@ export async function downloadTicketPDF(props: DownloadTicketProps) {
     ['Buyer Name', props.buyerName],
     ['Ticket ID', props.ticketId],
     ['Quantity', String(props.quantity)],
-    ['Total Paid', isPayOnGate ? 'Pay at Gate' : formatPrice(props.totalPaid)],
+    ['Total Paid', isPayOnGate ? 'Pay at Gate' : isInvite ? 'Free (Invite)' : formatPrice(props.totalPaid)],
     ['Date', formatDate(props.eventDate)],
     ['Venue', props.eventVenue],
   ];

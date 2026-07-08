@@ -18,6 +18,7 @@ interface TicketTypeAdmin {
   description: string | null;
   status: 'active' | 'paused' | 'sold_out';
   sort_order: number;
+  color?: string;
   created_at: string;
 }
 
@@ -168,9 +169,10 @@ export function EventsTab({ apiFetch }: EventsTabProps) {
 
               <div className="flex flex-col gap-2">
                 {event.ticket_types.sort((a, b) => a.sort_order - b.sort_order).map((tt) => (
-                  <div key={tt.id} className="flex items-center justify-between bg-card-hover rounded-lg px-3 py-2 border border-border">
+                    <div key={tt.id} className="flex items-center justify-between bg-card-hover rounded-lg px-3 py-2 border border-border">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
+                        {tt.color && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tt.color }} />}
                         <span className="text-content text-sm font-medium">{tt.name}</span>
                         <Badge variant={tt.status === 'active' ? 'success' : tt.status === 'sold_out' ? 'danger' : 'warning'} size="sm">
                           {tt.status}
