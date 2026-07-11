@@ -7,3 +7,5 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare function fbq(command: string, eventName: string, parameters?: Record<string, unknown>): void;
