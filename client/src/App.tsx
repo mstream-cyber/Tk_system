@@ -26,6 +26,9 @@ function PageViewTracker() {
   const location = useLocation()
   useEffect(() => {
     captureEvent('$pageview', { url: location.pathname + location.search })
+    if (typeof fbq !== 'undefined') {
+      fbq('track', 'PageView')
+    }
   }, [location])
   return null
 }
