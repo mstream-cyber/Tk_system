@@ -77,6 +77,12 @@ export default function BookingPage() {
   const ticketTypes = (event?.ticket_types ?? [])
     .filter((tt) => tt.status === 'active')
     .sort((a, b) => a.sort_order - b.sort_order);
+
+  useEffect(() => {
+    if (ticketTypes.length === 1 && !form.ticketTypeId) {
+      setForm((prev) => ({ ...prev, ticketTypeId: ticketTypes[0].id }));
+    }
+  }, [ticketTypes]);
   const selectedTicket = ticketTypes.find((t) => t.id === form.ticketTypeId) ?? null;
   const maxQty = selectedTicket
     ? Math.min(selectedTicket.available_quantity, event?.max_tickets_per_order ?? 10)
@@ -454,7 +460,7 @@ export default function BookingPage() {
           const selected = form.ticketTypeId === tt.id;
           return (
             <button key={tt.id} type="button" disabled={soldOut} onClick={() => { handleChange('ticketTypeId', tt.id); if (form.quantity > Math.min(tt.available_quantity, 5)) handleChange('quantity', Math.min(tt.available_quantity, 5)); }}
-              className={`relative p-4 rounded-xl border-2 text-left transition-all overflow-hidden ${soldOut ? 'border-border bg-surface-elevated opacity-60 cursor-not-allowed' : selected ? 'border-accent bg-card shadow-sm' : 'border-border bg-card hover:border-accent'}`}>
+              className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 overflow-hidden ${soldOut ? 'border-border bg-surface-elevated opacity-60 cursor-not-allowed' : selected ? 'border-accent bg-accent/5 shadow-md' : 'border-border bg-card cursor-pointer hover:-translate-y-0.5 hover:border-accent hover:shadow-md hover:bg-surface-elevated'}`}>
               {tt.color && <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: tt.color }} />}
               <div className="flex items-center gap-2">
                 {tt.color && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tt.color }} />}
@@ -468,6 +474,12 @@ export default function BookingPage() {
                 <p className="text-xs text-warning font-medium mt-1">Only {tt.available_quantity} left</p>
               )}
               {soldOut && <Badge variant="danger" size="sm" className="absolute top-2 right-2">Sold out</Badge>}
+              {selected && (
+                <span className="absolute top-2 right-2 text-xs font-semibold text-accent-light flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+                  Selected
+                </span>
+              )}
             </button>
           );
         })}
