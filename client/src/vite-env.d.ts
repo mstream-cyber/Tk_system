@@ -9,3 +9,14 @@ interface ImportMeta {
 }
 
 declare function fbq(command: string, eventName: string, parameters?: Record<string, unknown>): void;
+
+interface PostHog {
+  capture(name: string, properties?: Record<string, unknown>): void
+  opt_out_capturing(): void
+  identify(id: string, properties?: Record<string, unknown>): void
+  reset(): void
+}
+
+interface Window {
+  posthog?: PostHog
+}
