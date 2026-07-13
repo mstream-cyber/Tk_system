@@ -91,6 +91,25 @@ router.post('/', validate, async (req: Request, res: Response) => {
     return;
   }
 
+  const { data: preVerified } = await supabase
+    .from('email_verifications')
+    .select('id')
+    .eq('email', buyer_email)
+    .eq('verified', true)
+    .maybeSingle();
+
+  if (preVerified) {
+    await supabase
+      .from('orders')
+      .update({ email_verified: true })
+      .eq('id', order.id);
+
+    await supabase
+      .from('email_verifications')
+      .delete()
+      .eq('id', preVerified.id);
+  }
+
   const notifyTo = process.env.NOTIFY_EMAIL
   if (notifyTo) {
     sendNewOrderNotification({

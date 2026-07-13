@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { fetchEvents, createBooking, uploadReceiptWithProgress, getOrderStatus, fetchConfig, joinWaitlist, verifyEmail, resendVerificationCode } from '../api';
+import { fetchEvents, createBooking, uploadReceiptWithProgress, getOrderStatus, fetchConfig, joinWaitlist, sendPreVerifyCode, confirmPreVerifyCode } from '../api';
 import { formatPrice, formatDate } from '../utils/format';
 import type { EventType, FormData, BookingData, PaymentConfig } from '../types';
 import { Button } from '../components/ui/Button';
@@ -40,6 +40,7 @@ export default function BookingPage() {
   const [statusChecked, setStatusChecked] = useState(false);
   const [statusResult, setStatusResult] = useState<'approved' | 'pending' | null>(null);
   const [verifyCode, setVerifyCode] = useState<string[]>(Array(6).fill(''));
+  const [sendCodeFailed, setSendCodeFailed] = useState(false);
   const [verifyError, setVerifyError] = useState('');
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -186,8 +187,7 @@ export default function BookingPage() {
 
     if (isPayOnGate) {
       setLoading(false);
-      setStep(3);
-      setCountdown(60);
+      setStep(4);
       return;
     }
 
@@ -203,8 +203,7 @@ export default function BookingPage() {
       captureEvent('receipt_uploaded', {
         order_id: bookRes.data.order_id,
       })
-      setStep(3);
-      setCountdown(60);
+      setStep(4);
     } else {
       setUploadFailed(true);
       setErrors({ api: uploadRes.error || 'Receipt upload failed. Please try again.' });
@@ -224,8 +223,7 @@ export default function BookingPage() {
     );
     setLoading(false);
     if (res.success) {
-      setStep(3);
-      setCountdown(60);
+      setStep(4);
     } else {
       setUploadFailed(true);
       setErrors({ api: res.error || 'Upload failed. Please try again.' });
@@ -271,6 +269,7 @@ export default function BookingPage() {
     setVerifyCode(Array(6).fill(''));
     setVerifyError('');
     setCountdown(0);
+    setSendCodeFailed(false);
     setStep(1);
   }, []);
 
@@ -293,18 +292,25 @@ export default function BookingPage() {
   }, [step, form.paymentMethod, statusChecked]);
 
   useEffect(() => {
-    if (step !== 3 || !booking) return;
+    if (step !== 2) return;
     let cancelled = false;
+    setVerifyCode(Array(6).fill(''));
+    setVerifyError('');
     setVerifyLoading(true);
-    resendVerificationCode(booking.order_id).then((res) => {
+    setSendCodeFailed(false);
+    sendPreVerifyCode(form.buyerEmail).then((res) => {
       if (cancelled) return;
       if (res.success) {
         setCountdown(60);
       } else {
-        setVerifyError(res.error || 'Failed to send verification code');
+        setSendCodeFailed(true);
+        setVerifyError(res.error || 'Could not send verification code');
       }
     }).catch(() => {
-      if (!cancelled) setVerifyError('Network error. Please request a new code.');
+      if (!cancelled) {
+        setSendCodeFailed(true);
+        setVerifyError('Network error. Please try again.');
+      }
     }).finally(() => {
       if (!cancelled) setVerifyLoading(false);
     });
@@ -314,34 +320,35 @@ export default function BookingPage() {
   const handleVerifySubmit = useCallback(async () => {
     const code = verifyCode.join('');
     if (code.length !== 6) { setVerifyError('Enter the full 6-digit code'); return; }
-    if (!booking) return;
     setVerifyLoading(true);
     setVerifyError('');
-    const res = await verifyEmail(booking.order_id, code);
+    const res = await confirmPreVerifyCode(form.buyerEmail, code);
     setVerifyLoading(false);
     if (res.success) {
-      captureEvent('email_verified', {
-        order_id: booking.order_id,
-      })
-      setStep(4);
+      captureEvent('email_verified', { email: form.buyerEmail })
+      setStep(3);
     } else {
       setVerifyError(res.error || 'Verification failed');
       setVerifyCode(Array(6).fill(''));
     }
-  }, [verifyCode, booking]);
+  }, [verifyCode, form.buyerEmail]);
 
   const handleResendCode = useCallback(async () => {
-    if (!booking || countdown > 0) return;
+    if (countdown > 0) return;
     setVerifyError('');
-    const res = await resendVerificationCode(booking.order_id);
+    setSendCodeFailed(false);
+    setVerifyLoading(true);
+    const res = await sendPreVerifyCode(form.buyerEmail);
+    setVerifyLoading(false);
     if (res.success) {
       setCountdown(60);
       setVerifyCode(Array(6).fill(''));
       setVerifyError('');
     } else {
+      setSendCodeFailed(true);
       setVerifyError(res.error || 'Failed to resend code');
     }
-  }, [booking, countdown]);
+  }, [countdown, form.buyerEmail]);
 
   const handleVerifyCodeChange = useCallback((index: number, value: string) => {
     if (value && !/^\d$/.test(value)) return;
@@ -618,7 +625,7 @@ export default function BookingPage() {
       {errors.api && <p className="text-danger-light text-sm text-center mt-2">{errors.api}</p>}
 
       <div className="flex gap-3 mt-6">
-        <Button variant="secondary" onClick={() => setStep(1)} className="flex-1">Back</Button>
+        <Button variant="secondary" onClick={() => setStep(2)} className="flex-1">Back</Button>
         {uploadFailed && !isPayOnGate ? (
           <Button variant="danger" onClick={handleRetry} disabled={loading} loading={loading} className="flex-[2]">
             {loading ? 'Retrying...' : 'Retry Upload'}
@@ -644,40 +651,65 @@ export default function BookingPage() {
           </div>
           <h2 className="text-xl font-bold text-content mb-2">Verify your email</h2>
           <p className="text-sm text-content-muted">
-            We sent a 6-digit code to <strong className="text-content-secondary">{form.buyerEmail}</strong>
+            {sendCodeFailed
+              ? <>Could not send code to <strong className="text-content-secondary">{form.buyerEmail}</strong>.</>
+              : <>We sent a 6-digit code to <strong className="text-content-secondary">{form.buyerEmail}</strong></>
+            }
           </p>
         </div>
 
-        <div className="flex gap-2 justify-center mb-6">
-          {verifyCode.map((digit, i) => (
-            <input
-              key={i}
-              id={`vcode-${i}`}
-              type="text"
-              inputMode="numeric"
-              maxLength={1}
-              value={digit}
-              onChange={(e) => handleVerifyCodeChange(i, e.target.value)}
-              onKeyDown={(e) => handleVerifyKeyDown(i, e)}
-              className="w-12 h-14 text-center text-xl font-bold bg-input border border-border rounded-lg text-content outline-none focus:border-accent focus:ring-1 focus:ring-accent"
-              autoFocus={i === 0}
-            />
-          ))}
-        </div>
+        {sendCodeFailed ? (
+          <div className="space-y-3">
+            <p className="text-danger-light text-sm">{verifyError}</p>
+            <Button onClick={() => setStep(1)} variant="secondary" className="w-full">
+              Change email address
+            </Button>
+            <Button onClick={handleResendCode} loading={verifyLoading} className="w-full">
+              Try again
+            </Button>
+            <button onClick={() => setStep(1)} className="text-sm text-content-muted hover:text-accent-light transition-colors">
+              Go back
+            </button>
+          </div>
+        ) : verifyLoading && !verifyCode.some(Boolean) ? (
+          <div className="flex flex-col items-center gap-3 py-8">
+            <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-content-muted">Sending verification code...</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-2 justify-center mb-6">
+              {verifyCode.map((digit, i) => (
+                <input
+                  key={i}
+                  id={`vcode-${i}`}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleVerifyCodeChange(i, e.target.value)}
+                  onKeyDown={(e) => handleVerifyKeyDown(i, e)}
+                  className="w-12 h-14 text-center text-xl font-bold bg-input border border-border rounded-lg text-content outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                  autoFocus={i === 0}
+                />
+              ))}
+            </div>
 
-        {verifyError && <p className="text-danger-light text-sm mb-4">{verifyError}</p>}
+            {verifyError && <p className="text-danger-light text-sm mb-4">{verifyError}</p>}
 
-        <Button onClick={handleVerifySubmit} disabled={verifyLoading || verifyCode.join('').length !== 6} loading={verifyLoading} className="w-full mb-3">
-          {verifyLoading ? 'Verifying...' : 'Verify Email'}
-        </Button>
+            <Button onClick={handleVerifySubmit} disabled={verifyLoading || verifyCode.join('').length !== 6} loading={verifyLoading} className="w-full mb-3">
+              {verifyLoading ? 'Verifying...' : 'Verify Email'}
+            </Button>
 
-        <button
-          onClick={handleResendCode}
-          disabled={countdown > 0}
-          className="text-sm text-content-muted hover:text-accent-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend code'}
-        </button>
+            <button onClick={handleResendCode} disabled={countdown > 0} className="text-sm text-content-muted hover:text-accent-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend code'}
+            </button>
+
+            <button onClick={() => setStep(1)} className="block w-full text-sm text-content-muted hover:text-accent-light transition-colors mt-4">
+              Change email address
+            </button>
+          </>
+        )}
       </div>
     );
   };
@@ -763,8 +795,8 @@ export default function BookingPage() {
         <StepIndicator steps={4} currentStep={step} />
         <Card>
           {step === 1 && renderStep1()}
-          {step === 2 && renderStep2()}
-          {step === 3 && renderStep3()}
+          {step === 2 && renderStep3()}
+          {step === 3 && renderStep2()}
           {step === 4 && renderStep4()}
         </Card>
       </div>

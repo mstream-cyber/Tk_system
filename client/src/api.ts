@@ -102,6 +102,29 @@ export async function resendVerificationCode(
   return res.json();
 }
 
+export async function sendPreVerifyCode(
+  email: string
+): Promise<ApiResponse<{ message: string }>> {
+  const res = await fetch(`${BASE}/pre-verify/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  return res.json();
+}
+
+export async function confirmPreVerifyCode(
+  email: string,
+  code: string
+): Promise<ApiResponse<{ message: string }>> {
+  const res = await fetch(`${BASE}/pre-verify/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
+  });
+  return res.json();
+}
+
 export async function joinWaitlist(
   eventId: string,
   email: string

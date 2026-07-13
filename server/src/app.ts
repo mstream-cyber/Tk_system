@@ -17,6 +17,7 @@ import adminRouter from './routes/admin';
 import adminEventsRouter from './routes/adminEvents';
 import waitlistRouter from './routes/waitlist';
 import verifyRouter from './routes/verify';
+import preVerifyRouter from './routes/preVerify';
 import { supabase } from './supabase';
 import { success } from './utils/response';
 
@@ -82,6 +83,7 @@ app.use('/api/book', bookLimiter, bookingRouter);
 app.use('/api/payment', receiptRouter);
 app.use('/api/waitlist', waitlistLimiter, waitlistRouter);
 app.use('/api/verify', verifyRouter);
+app.use('/api/pre-verify', preVerifyRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/admin/events', adminEventsRouter);
 
