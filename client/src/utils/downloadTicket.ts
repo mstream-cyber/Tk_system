@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 import { jsPDF } from 'jspdf';
-import { formatPrice, formatDate, formatTime } from './format';
+import { formatPrice, formatDate } from './format';
 
 export interface DownloadTicketProps {
   ticketId: string;
@@ -39,7 +39,7 @@ export async function downloadTicketPDF(props: DownloadTicketProps) {
   doc.text(props.eventName, mg, 20);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  const timeStr = props.eventTime ? ` · ${props.eventTime}` : ` at ${formatTime(props.eventDate)}`
+  const timeStr = props.eventTime ? ` · ${props.eventTime}` : ''
   doc.text(`${formatDate(props.eventDate)}${timeStr}`, mg, 30);
   doc.text(props.eventVenue, mg, 38);
 

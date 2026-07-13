@@ -55,12 +55,20 @@ export default function BookingPage() {
         if (res.success && res.data) {
           const published = (res.data as EventType[]).filter((e) => e.status === 'published');
           setEvents(published);
+          setErrors((prev) => { const next = { ...prev }; delete next.load; return next; });
+        } else {
+          setErrors((prev) => ({ ...prev, load: 'Could not load events.' }));
         }
       })
-      .catch(console.error);
+      .catch(() => setErrors((prev) => ({ ...prev, load: 'Network error loading events.' })));
     fetchConfig()
-      .then((res) => { if (res.success && res.data) setConfig(res.data); })
-      .catch(console.error);
+      .then((res) => {
+        if (res.success && res.data) {
+          setConfig(res.data);
+          setErrors((prev) => { const next = { ...prev }; delete next.load; return next; });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -89,6 +97,7 @@ export default function BookingPage() {
     ? Math.min(selectedTicket.available_quantity, event?.max_tickets_per_order ?? 10)
     : 1;
   const allSoldOut = event && ticketTypes.length > 0 && ticketTypes.every((tt) => tt.available_quantity === 0);
+  const eventMaxQty = event?.max_tickets_per_order ?? 10;
 
   const liveTotal = useMemo(() => {
     if (!selectedTicket) return 0;
@@ -153,6 +162,7 @@ export default function BookingPage() {
   }, [filePreview]);
 
   const handleSubmit = useCallback(async () => {
+    if (loading) return;
     const isPayOnGate = form.paymentMethod === 'pay_on_gate';
     if (!selectedTicket || !form.paymentMethod || (!isPayOnGate && !selectedFile)) return;
     setLoading(true);
@@ -211,6 +221,7 @@ export default function BookingPage() {
   }, [form, selectedTicket, selectedFile]);
 
   const handleRetry = useCallback(async () => {
+    if (loading) return;
     if (!booking || !selectedFile) return;
     setLoading(true);
     setUploadProgress(0);
@@ -460,13 +471,15 @@ export default function BookingPage() {
     <div>
       <EventHeader />
 
+      {errors.load && <p className="text-danger-light text-sm mb-4">{errors.load}</p>}
+
       <label className="block text-sm font-semibold text-content-secondary mb-2">Select Ticket Type</label>
       <div className="grid grid-cols-2 gap-3 mb-5">
         {ticketTypes.map((tt) => {
           const soldOut = tt.available_quantity === 0;
           const selected = form.ticketTypeId === tt.id;
           return (
-            <button key={tt.id} type="button" disabled={soldOut} onClick={() => { handleChange('ticketTypeId', tt.id); if (form.quantity > Math.min(tt.available_quantity, 5)) handleChange('quantity', Math.min(tt.available_quantity, 5)); }}
+            <button key={tt.id} type="button" disabled={soldOut} onClick={() => { handleChange('ticketTypeId', tt.id); if (form.quantity > Math.min(tt.available_quantity, eventMaxQty)) handleChange('quantity', Math.min(tt.available_quantity, eventMaxQty)); }}
               className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 overflow-hidden ${soldOut ? 'border-border bg-surface-elevated opacity-60 cursor-not-allowed' : selected ? 'border-accent bg-accent/5 shadow-md' : 'border-border bg-card cursor-pointer hover:-translate-y-0.5 hover:border-accent hover:shadow-md hover:bg-surface-elevated'}`}>
               {tt.color && <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: tt.color }} />}
               <div className="flex items-center gap-2">
@@ -527,7 +540,7 @@ export default function BookingPage() {
     </div>
   );
 
-  const renderStep2 = () => {
+  const renderPaymentStep = () => {
     const isPayOnGate = form.paymentMethod === 'pay_on_gate';
 
     return (
@@ -640,7 +653,7 @@ export default function BookingPage() {
   );
   };
 
-  const renderStep3 = () => {
+  const renderEmailVerifyStep = () => {
     return (
       <div className="text-center">
         <div className="mb-6">
@@ -795,8 +808,8 @@ export default function BookingPage() {
         <StepIndicator steps={4} currentStep={step} />
         <Card>
           {step === 1 && renderStep1()}
-          {step === 2 && renderStep3()}
-          {step === 3 && renderStep2()}
+          {step === 2 && renderEmailVerifyStep()}
+          {step === 3 && renderPaymentStep()}
           {step === 4 && renderStep4()}
         </Card>
       </div>

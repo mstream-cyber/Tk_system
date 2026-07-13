@@ -102,8 +102,8 @@ export default function TicketPage() {
           <LogoHeader />
           <TicketCard
             ticketId={order.ticket_id}
-            scanToken={order.scan_token!}
-            buyerName={order.buyer_name!}
+            scanToken={order.scan_token ?? ''}
+            buyerName={order.buyer_name ?? ''}
             eventName={eventName}
             eventDate={eventDate}
             eventTime={eventTime}

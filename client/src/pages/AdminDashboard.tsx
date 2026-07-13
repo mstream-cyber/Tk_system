@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { useApi } from '../hooks/useApi';
+import { Spinner } from '../components/ui/Spinner';
 import { StatsBar } from '../components/admin/StatsBar';
 import { OrdersTab } from '../components/admin/OrdersTab';
 import { EventsTab } from '../components/admin/EventsTab';
@@ -62,10 +63,23 @@ interface EventAdmin {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { apiFetch } = useApi();
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [stats, setStats] = useState<Stats | null>(null);
   const [activeTab, setActiveTab] = useState<'orders' | 'events' | 'gate_sale' | 'invites'>('orders');
   const [showScanModal, setShowScanModal] = useState(false);
   const [events, setEvents] = useState<EventAdmin[]>([]);
+
+  useEffect(() => {
+    apiFetch('/api/admin/verify').then((res) => {
+      if (!res || !(res as Record<string, unknown>).success) {
+        navigate('/23646/login', { replace: true });
+      } else {
+        setCheckingAuth(false);
+      }
+    }).catch(() => {
+      navigate('/23646/login', { replace: true });
+    });
+  }, [apiFetch, navigate]);
 
   const fetchStats = useCallback(async () => {
     const data = await apiFetch('/api/admin/stats');
@@ -89,7 +103,8 @@ export default function AdminDashboard() {
     if (activeTab === 'events' || activeTab === 'gate_sale' || activeTab === 'invites') fetchEvents();
   }, [activeTab, fetchEvents]);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    await fetch('/api/admin/logout', { method: 'POST' }).catch(() => {});
     navigate('/23646/login', { replace: true });
   }, [navigate]);
 
@@ -104,6 +119,14 @@ export default function AdminDashboard() {
   const handleSaleSuccess = useCallback(() => {
     fetchStats();
   }, [fetchStats]);
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-surface">

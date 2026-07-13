@@ -3,7 +3,7 @@ import { body, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
 import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
-import { requireRole, generateToken } from '../middleware/auth';
+import { requireRole, generateToken, authMiddleware } from '../middleware/auth';
 import type { AuthRequest } from '../middleware/auth';
 import { MS } from '../lib/constants';
 import { sendTicketEmail, sendRejectionEmail, sendNewOrderNotification, sendInviteNotification } from '../services/email';
@@ -45,6 +45,16 @@ router.post('/login', loginLimiter, (req: Request, res: Response) => {
     path: '/',
   });
   res.json(success({ message: 'Login successful' }));
+});
+
+router.get('/verify', authMiddleware, (req: AuthRequest, res: Response) => {
+  res.json(success({ role: req.admin?.role }));
+});
+
+router.post('/logout', (_req: Request, res: Response) => {
+  res.clearCookie('admin_token', { path: '/' });
+  res.clearCookie('scanner_token', { path: '/' });
+  res.json(success({ message: 'Logged out' }));
 });
 
 router.patch('/restore-quantity', async (req: Request, res: Response) => {
@@ -221,10 +231,18 @@ router.post('/invites', async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  const newAvailable = ticketType.available_quantity - 1;
-  const { error: decErr } = await supabase.from('ticket_types').update({ available_quantity: newAvailable }).eq('id', ticket_type_id);
-  if (decErr) {
-    console.error(`Failed to decrement inventory for invite ${order.id}:`, decErr.message || 'Unknown error');
+  const { data: decCheck, error: decErr } = await supabase
+    .from('ticket_types')
+    .update({ available_quantity: ticketType.available_quantity - 1 })
+    .eq('id', ticket_type_id)
+    .eq('available_quantity', ticketType.available_quantity)
+    .select();
+
+  if (decErr || !decCheck || decCheck.length === 0) {
+    await supabase.from('orders').delete().eq('id', order.id);
+    console.error(`Failed to decrement inventory for invite ${order.id}:`, decErr?.message || 'Race condition');
+    res.status(409).json(error('Inventory changed, please retry'));
+    return;
   }
 
   sendInviteNotification({

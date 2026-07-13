@@ -4,7 +4,8 @@ import { supabase } from '../supabase';
 import { success, error } from '../utils/response';
 import { generateTicketId } from '../utils/ticketId';
 import { generateScanToken } from '../utils/scanToken';
-import { sendNewOrderNotification } from '../services/email';
+import { sendNewOrderNotification, sendTicketEmail } from '../services/email';
+import type { Order } from '../services/email';
 
 const router = Router();
 
@@ -103,6 +104,31 @@ router.post('/', validate, async (req: Request, res: Response) => {
       .from('orders')
       .update({ email_verified: true })
       .eq('id', order.id);
+
+    if (isPayOnGate) {
+      const { data: fullOrder } = await supabase
+        .from('orders')
+        .select('*, ticket_types(name, price, events(name, date, time, venue, city, organizer_phone, location_link, terms_conditions))')
+        .eq('id', order.id)
+        .single();
+
+      if (fullOrder) {
+        const emailOrder: Order = {
+          id: fullOrder.id,
+          ticket_id: fullOrder.ticket_id,
+          scan_token: fullOrder.scan_token,
+          buyer_name: fullOrder.buyer_name,
+          buyer_email: fullOrder.buyer_email,
+          quantity: fullOrder.quantity,
+          total_amount: fullOrder.total_amount,
+          payment_method: fullOrder.payment_method,
+          ticket_types: fullOrder.ticket_types,
+        };
+        sendTicketEmail(emailOrder).catch((err) =>
+          console.error(`Failed to send ticket email after booking for order ${fullOrder.id}:`, err)
+        );
+      }
+    }
 
     await supabase
       .from('email_verifications')

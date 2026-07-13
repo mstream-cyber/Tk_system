@@ -10,7 +10,7 @@ import type { Order } from '../services/email';
 
 const router = Router();
 
-const VERIFICATION_SALT = process.env.VERIFICATION_SALT || 'fallback-salt';
+const VERIFICATION_SALT = process.env.VERIFICATION_SALT!;
 const CODE_EXPIRY_MS = 5 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 const RESEND_COOLDOWN_MS = 60 * 1000;

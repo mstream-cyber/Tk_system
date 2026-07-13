@@ -91,6 +91,25 @@ CREATE POLICY "Anyone can insert waitlist" ON waitlist
   WITH CHECK (true);
 
 -- ============================
+-- EMAIL VERIFICATIONS
+-- ============================
+CREATE TABLE IF NOT EXISTS email_verifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  code_hash TEXT NOT NULL,
+  attempts INTEGER DEFAULT 0,
+  sent_at TIMESTAMPTZ DEFAULT now(),
+  verified BOOLEAN DEFAULT false
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_verifications_email ON email_verifications (email);
+
+ALTER TABLE email_verifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role can manage email verifications" ON email_verifications
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ============================
 -- ROW LEVEL SECURITY
 -- ============================
 
@@ -132,9 +151,9 @@ CREATE POLICY "Anyone can insert orders" ON orders
   TO public
   WITH CHECK (true);
 
-CREATE POLICY "Orders readable by ticket_id" ON orders
+CREATE POLICY "Service role can read orders" ON orders
   FOR SELECT
-  TO public
+  TO service_role
   USING (true);
 
 CREATE POLICY "Service role can update orders" ON orders

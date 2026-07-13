@@ -53,7 +53,7 @@ export default function EventPage() {
     <div className="min-h-screen bg-surface pb-8">
       <div className="max-w-[480px] mx-auto px-4">
         <div className="relative flex items-center justify-center mb-4 min-h-[40px] pt-6">
-          <button onClick={() => navigate(-1)} className="absolute left-0 text-content-muted hover:text-content transition-colors">
+          <button onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')} className="absolute left-0 text-content-muted hover:text-content transition-colors">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>

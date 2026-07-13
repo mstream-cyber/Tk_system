@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { formatPrice, formatDate, formatTime } from '../utils/format';
+import { formatPrice, formatDate } from '../utils/format';
 
 export interface TicketCardProps {
   ticketId: string;
@@ -39,7 +39,7 @@ export default function TicketCard(props: TicketCardProps) {
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-bold leading-tight">{props.eventName}</h3>
             <p className="text-xs opacity-80 mt-1">
-              {formatDate(props.eventDate)}{props.eventTime ? ` · ${props.eventTime}` : ` at ${formatTime(props.eventDate)}`}
+              {formatDate(props.eventDate)}{props.eventTime ? ` · ${props.eventTime}` : ''}
             </p>
             <p className="text-xs opacity-80">{props.eventVenue}</p>
           </div>

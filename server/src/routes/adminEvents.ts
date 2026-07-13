@@ -339,7 +339,7 @@ const updateTicketTypeValidation = [
   body('price').optional().isInt({ min: 1 }),
   body('description').optional().trim().isString(),
   body('sort_order').optional().isInt(),
-  body('status').optional().isIn(['active', 'inactive']),
+  body('status').optional().isIn(['active', 'paused', 'sold_out']),
 ];
 
 router.put('/:event_id/ticket-types/:type_id', updateTicketTypeValidation, async (req: Request, res: Response) => {

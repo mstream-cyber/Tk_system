@@ -44,7 +44,7 @@ router.get('/:ticket_id', async (req, res) => {
   res.json(success(data));
 });
 
-router.patch('/:ticket_id/scan', async (req, res) => {
+router.patch('/:ticket_id/scan', requireRole('admin', 'scanner'), async (req, res) => {
   const { ticket_id } = req.params;
   const { data: order, error: fetchErr } = await supabase
     .from('orders')

@@ -237,7 +237,9 @@ export default function ScanPage() {
   }, [scannerToken]);
 
   const formatTimestamp = (iso: string, withTime = true) => {
+    if (!iso) return '—';
     const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const day = String(d.getDate()).padStart(2, '0');
     const month = months[d.getMonth()];
