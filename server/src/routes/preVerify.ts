@@ -27,7 +27,7 @@ const sendLimiter = rateLimit({
   message: { success: false, error: 'Too many verification requests' },
 });
 
-router.post('/send', sendLimiter, async (req: Request, res: Response) => {
+router.post('/send', sendLimiter, body('email').isEmail(), async (req: Request, res: Response) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     res.status(400).json(error(errors.array().map((e) => e.msg).join('; ')));
@@ -38,21 +38,23 @@ router.post('/send', sendLimiter, async (req: Request, res: Response) => {
   const code = generateCode();
   const hash = hashCode(code);
 
-  const { error: upsertErr } = await supabase
+  await supabase
     .from('email_verifications')
-    .upsert(
-      {
-        email,
-        code_hash: hash,
-        attempts: 0,
-        sent_at: new Date().toISOString(),
-        verified: false,
-      },
-      { onConflict: 'email', ignoreDuplicates: false }
-    );
+    .delete()
+    .eq('email', email);
 
-  if (upsertErr) {
-    console.error('Failed to store verification code:', upsertErr.message);
+  const { error: insertErr } = await supabase
+    .from('email_verifications')
+    .insert({
+      email,
+      code_hash: hash,
+      attempts: 0,
+      sent_at: new Date().toISOString(),
+      verified: false,
+    });
+
+  if (insertErr) {
+    console.error('Failed to store verification code:', insertErr.message, insertErr.details);
     res.status(500).json(error('Failed to send verification code'));
     return;
   }
@@ -77,7 +79,7 @@ router.post('/send', sendLimiter, async (req: Request, res: Response) => {
   }
 });
 
-router.post('/confirm', async (req: Request, res: Response) => {
+router.post('/confirm', body('email').isEmail(), body('code').matches(/^\d{6}$/), async (req: Request, res: Response) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     res.status(400).json(error(errors.array().map((e) => e.msg).join('; ')));
