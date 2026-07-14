@@ -7,7 +7,7 @@ import { Spinner } from '../ui/Spinner';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useToast } from '../../hooks/useToast';
-import { formatPrice, formatShortDate } from '../../utils/format';
+import { formatPrice, formatShortDate, formatShortDateTime } from '../../utils/format';
 
 interface OrderType {
   id: string;
@@ -261,6 +261,7 @@ export function OrdersTab({ apiFetch, onStatsRefresh }: OrdersTabProps) {
               <th className="text-right px-4 py-3 font-medium">Amount</th>
               <th className="text-left px-4 py-3 font-medium">Method</th>
               <th className="text-left px-4 py-3 font-medium">Status</th>
+              <th className="text-center px-4 py-3 font-medium">Receipt</th>
               <th className="text-left px-4 py-3 font-medium">Scanned</th>
               <th className="text-left px-4 py-3 font-medium">Date</th>
               <th className="text-right px-4 py-3 font-medium">Actions</th>
@@ -291,13 +292,19 @@ export function OrdersTab({ apiFetch, onStatsRefresh }: OrdersTabProps) {
                   </span>
                 </td>
                 <td className="px-4 py-3"><Badge variant={badge.variant}>{badge.label}</Badge></td>
+                <td className="px-4 py-3 text-center">
+                  {order.receipt_url
+                    ? <Button onClick={() => handleViewReceipt(order.id)} variant="secondary" size="sm">View</Button>
+                    : <span className="text-content-placeholder">—</span>
+                  }
+                </td>
                 <td className="px-4 py-3 text-xs whitespace-nowrap">
                   {order.scanned_at
                     ? <span className="text-success-light font-medium">{formatShortDate(order.scanned_at)}</span>
                     : <span className="text-content-placeholder">—</span>
                   }
                 </td>
-                <td className="px-4 py-3 text-content-muted text-xs whitespace-nowrap">{formatShortDate(order.created_at)}</td>
+                <td className="px-4 py-3 text-content-muted text-xs whitespace-nowrap">{formatShortDateTime(order.created_at)}</td>
                 <td className="px-4 py-3 text-right">
                   {order.payment_status === 'receipt_uploaded' && (
                     <div className="flex items-center gap-1 justify-end">
