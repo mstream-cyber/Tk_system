@@ -34,6 +34,10 @@ interface EventAdmin {
   poster_url: string | null;
   status: 'draft' | 'published' | 'cancelled';
   max_tickets_per_order: number;
+  bulk_discount_enabled: boolean;
+  bulk_discount_min_qty: number;
+  bulk_discount_type: string;
+  bulk_discount_value: number;
   organizer_phone: string | null;
   location_link: string | null;
   terms_conditions: string | null;

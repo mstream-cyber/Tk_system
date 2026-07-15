@@ -18,6 +18,10 @@ interface EventFormEvent {
   organizer_phone: string | null;
   location_link: string | null;
   terms_conditions: string | null;
+  bulk_discount_enabled: boolean;
+  bulk_discount_min_qty: number;
+  bulk_discount_type: string;
+  bulk_discount_value: number;
   created_at: string;
   ticket_types: unknown[];
 }
@@ -41,6 +45,9 @@ export default function EventForm({ event, onClose, onSaved, apiFetch }: EventFo
   const [organizerPhone, setOrganizerPhone] = useState('');
   const [locationLink, setLocationLink] = useState('');
   const [termsConditions, setTermsConditions] = useState('');
+  const [bulkDiscountEnabled, setBulkDiscountEnabled] = useState(false);
+  const [bulkDiscountMinQty, setBulkDiscountMinQty] = useState(5);
+  const [bulkDiscountValue, setBulkDiscountValue] = useState(0);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState('');
   const [loading, setLoading] = useState(false);
@@ -61,6 +68,9 @@ export default function EventForm({ event, onClose, onSaved, apiFetch }: EventFo
       setOrganizerPhone(event.organizer_phone || '');
       setLocationLink(event.location_link || '');
       setTermsConditions(event.terms_conditions || '');
+      setBulkDiscountEnabled(event.bulk_discount_enabled ?? false);
+      setBulkDiscountMinQty(event.bulk_discount_min_qty ?? 5);
+      setBulkDiscountValue(event.bulk_discount_value ?? 0);
       if (event.banner_url) setBannerPreview(event.banner_url);
     }
   }, [event]);
@@ -93,6 +103,10 @@ export default function EventForm({ event, onClose, onSaved, apiFetch }: EventFo
         organizer_phone: organizerPhone.trim() || undefined,
         location_link: locationLink.trim() || undefined,
         terms_conditions: termsConditions.trim() || undefined,
+        bulk_discount_enabled: bulkDiscountEnabled,
+        bulk_discount_min_qty: bulkDiscountEnabled ? bulkDiscountMinQty : undefined,
+        bulk_discount_type: 'percentage',
+        bulk_discount_value: bulkDiscountEnabled ? bulkDiscountValue : undefined,
       };
 
       let newEventId: string | null = null;
@@ -240,6 +254,42 @@ export default function EventForm({ event, onClose, onSaved, apiFetch }: EventFo
             min={1}
             max={20}
           />
+
+          <div className="pt-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={bulkDiscountEnabled}
+                onChange={(e) => setBulkDiscountEnabled(e.target.checked)}
+                className="w-4 h-4 rounded border-border bg-input accent-accent"
+              />
+              <span className="text-sm font-medium text-content-secondary">Enable bulk discount</span>
+            </label>
+          </div>
+
+          {bulkDiscountEnabled && (
+            <div className="flex gap-3 pl-6">
+              <div className="flex-1">
+                <Input
+                  label="Min quantity"
+                  type="number"
+                  value={String(bulkDiscountMinQty)}
+                  onChange={(e) => setBulkDiscountMinQty(Math.max(1, parseInt(e.target.value) || 1))}
+                  min={1}
+                />
+              </div>
+              <div className="flex-1">
+                <Input
+                  label="Discount %"
+                  type="number"
+                  value={String(bulkDiscountValue)}
+                  onChange={(e) => setBulkDiscountValue(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                  min={0}
+                  max={100}
+                />
+              </div>
+            </div>
+          )}
 
           <Input
             label="Organizer phone (for queries)"

@@ -32,7 +32,7 @@ router.post('/', validate, async (req: Request, res: Response) => {
 
   const { data: ticketType, error: fetchErr } = await supabase
     .from('ticket_types')
-    .select('*, events!inner(name)')
+    .select('*, events!inner(*)')
     .eq('id', ticket_type_id)
     .single();
 
@@ -47,7 +47,12 @@ router.post('/', validate, async (req: Request, res: Response) => {
   }
 
   const ticket_id = generateTicketId();
-  const total_amount = ticketType.price * quantity;
+  const event = ticketType.events;
+  let total_amount = ticketType.price * quantity;
+
+  if (event.bulk_discount_enabled && quantity >= event.bulk_discount_min_qty) {
+    total_amount = Math.round(total_amount * (100 - event.bulk_discount_value) / 100);
+  }
 
   const isPayOnGate = payment_method === 'pay_on_gate';
   const now = new Date().toISOString();

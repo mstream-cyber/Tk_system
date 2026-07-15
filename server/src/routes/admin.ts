@@ -338,7 +338,13 @@ router.post('/gate-sales',
       return;
     }
 
-    const total_amount = ticketType.price * quantity;
+    const event = ticketType.events;
+    let total_amount = ticketType.price * quantity;
+
+    if (event.bulk_discount_enabled && quantity >= event.bulk_discount_min_qty) {
+      total_amount = Math.round(total_amount * (100 - event.bulk_discount_value) / 100);
+    }
+
     const ticket_id = generateTicketId();
     const scan_token = generateScanToken();
     const now = new Date().toISOString();

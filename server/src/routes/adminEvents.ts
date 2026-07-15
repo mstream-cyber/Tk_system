@@ -57,6 +57,10 @@ const eventValidation = [
   body('organizer_phone').optional().trim().isString(),
   body('location_link').optional().trim().isString(),
   body('terms_conditions').optional().trim().isString(),
+  body('bulk_discount_enabled').optional().isBoolean(),
+  body('bulk_discount_min_qty').optional().isInt({ min: 1 }),
+  body('bulk_discount_type').optional().isIn(['percentage']),
+  body('bulk_discount_value').optional().isInt({ min: 0, max: 100 }),
 ];
 
 router.post('/', eventValidation, async (req: Request, res: Response) => {
@@ -82,6 +86,10 @@ router.post('/', eventValidation, async (req: Request, res: Response) => {
       organizer_phone: organizer_phone || null,
       location_link: req.body.location_link || null,
       terms_conditions: req.body.terms_conditions || null,
+      bulk_discount_enabled: req.body.bulk_discount_enabled ?? false,
+      bulk_discount_min_qty: req.body.bulk_discount_min_qty ?? 5,
+      bulk_discount_type: req.body.bulk_discount_type ?? 'percentage',
+      bulk_discount_value: req.body.bulk_discount_value ?? 0,
     })
     .select()
     .single();
@@ -108,6 +116,10 @@ const updateEventValidation = [
   body('organizer_phone').optional().trim().isString(),
   body('location_link').optional().trim().isString(),
   body('terms_conditions').optional().trim().isString(),
+  body('bulk_discount_enabled').optional().isBoolean(),
+  body('bulk_discount_min_qty').optional().isInt({ min: 1 }),
+  body('bulk_discount_type').optional().isIn(['percentage']),
+  body('bulk_discount_value').optional().isInt({ min: 0, max: 100 }),
 ];
 
 router.put('/:event_id', updateEventValidation, async (req: Request, res: Response) => {
@@ -118,7 +130,7 @@ router.put('/:event_id', updateEventValidation, async (req: Request, res: Respon
   }
 
   const { event_id } = req.params;
-  const allowedFields = ['name', 'date', 'time', 'venue', 'city', 'description', 'status', 'max_tickets_per_order', 'poster_url', 'banner_url', 'organizer_phone', 'location_link', 'terms_conditions'];
+  const allowedFields = ['name', 'date', 'time', 'venue', 'city', 'description', 'status', 'max_tickets_per_order', 'poster_url', 'banner_url', 'organizer_phone', 'location_link', 'terms_conditions', 'bulk_discount_enabled', 'bulk_discount_min_qty', 'bulk_discount_type', 'bulk_discount_value'];
   const updates: Record<string, unknown> = {};
 
   for (const field of allowedFields) {

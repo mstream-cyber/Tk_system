@@ -17,6 +17,10 @@ CREATE TABLE events (
   banner_url TEXT,
   time TEXT,
   max_tickets_per_order INTEGER DEFAULT 10,
+  bulk_discount_enabled BOOLEAN NOT NULL DEFAULT false,
+  bulk_discount_min_qty INTEGER NOT NULL DEFAULT 5,
+  bulk_discount_type TEXT NOT NULL DEFAULT 'percentage',
+  bulk_discount_value INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

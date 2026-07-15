@@ -99,10 +99,15 @@ export default function BookingPage() {
   const allSoldOut = event && ticketTypes.length > 0 && ticketTypes.every((tt) => tt.available_quantity === 0);
   const eventMaxQty = event?.max_tickets_per_order ?? 10;
 
+  const discountPercent = (event?.bulk_discount_enabled && form.quantity >= (event?.bulk_discount_min_qty ?? 99))
+    ? (event?.bulk_discount_value ?? 0)
+    : 0;
+
   const liveTotal = useMemo(() => {
     if (!selectedTicket) return 0;
-    return selectedTicket.price * form.quantity;
-  }, [selectedTicket, form.quantity]);
+    const raw = selectedTicket.price * form.quantity;
+    return discountPercent > 0 ? Math.round(raw * (100 - discountPercent) / 100) : raw;
+  }, [selectedTicket, form.quantity, discountPercent]);
 
   const set = useCallback(<K extends keyof FormData>(key: K, value: FormData[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -529,9 +534,16 @@ export default function BookingPage() {
         </div>
       </div>
 
-      <div className="mt-6 p-4 bg-input rounded-xl flex items-center justify-between">
-        <span className="text-sm font-semibold text-content-secondary">Total</span>
-        <span className="text-xl font-bold text-accent-light">{formatPrice(liveTotal)}</span>
+      <div className="mt-6 p-4 bg-input rounded-xl">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-content-secondary">Total</span>
+          <span className="text-xl font-bold text-accent-light">{formatPrice(liveTotal)}</span>
+        </div>
+        {discountPercent > 0 && (
+          <div className="mt-1 text-xs text-success-light font-medium text-right">
+            {discountPercent}% bulk discount applied
+          </div>
+        )}
       </div>
 
       <Button onClick={handleContinue} className="mt-5 w-full" size="lg">
@@ -548,6 +560,9 @@ export default function BookingPage() {
       <div className="bg-gradient-to-r from-accent to-indigo-800 text-white rounded-xl p-5 mb-6 text-center">
         <p className="text-sm opacity-80 mb-1">Amount to Pay</p>
         <p className="text-3xl font-bold">{formatPrice(liveTotal)}</p>
+        {discountPercent > 0 && (
+          <p className="text-xs text-green-200 mt-1 font-medium">{discountPercent}% bulk discount applied</p>
+        )}
       </div>
 
       <label className="block text-sm font-semibold text-content-secondary mb-3">Select Payment Method</label>
